@@ -14,11 +14,34 @@ maxFramesBetweenState = 0;
 const client = new Colyseus.Client("ws://localhost:2567");
 let room;
 
-function drawCircle(x, y, color) {
+function drawSpaceship(x, y, direction, color, accel) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(direction);
+
   ctx.beginPath();
-  ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+  ctx.moveTo(10, 0); // Forward point of the triangle
+  ctx.lineTo(-6, 7); // Bottom right point of the triangle
+  ctx.lineTo(-3, 0); // Center of engine
+  ctx.lineTo(-6, -7); // Bottom left point of the triangle
+  ctx.closePath();
+
   ctx.fillStyle = color;
   ctx.fill();
+
+  if (accel > 0) {
+      ctx.beginPath();
+      ctx.moveTo(-6, 0); 
+      ctx.lineTo(-8, 3); 
+      ctx.lineTo(-15, 0); 
+      ctx.lineTo(-8, -3); 
+      ctx.closePath();
+
+      ctx.fillStyle = "red";
+      ctx.fill();
+  }
+
+  ctx.restore();
 }
 
 function render() {
@@ -30,8 +53,13 @@ function render() {
   //updating the position for latency from last update
   room.state.players.forEach((player, sessionId) => {
     const color = sessionId === room.sessionId ? "blue" : "green";
-    drawCircle(player.x + (player.vx * timeStepUpdate), 
-               player.y + (player.vy * timeStepUpdate), color);
+    drawSpaceship(
+      player.x + player.vx * timeStepUpdate,
+      player.y + player.vy * timeStepUpdate,
+      player.direction,
+      color,
+      player.accel
+    );
   });
 
   //Keep track of how many frames have been rendered
@@ -65,7 +93,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   document.addEventListener("keydown", (event) => {
-    room.send("move", event.key);
+    const key = event.key;
+    if (["w", "a", "s", "d"].includes(key)) {
+      room.send("input", key + "-down");
+    }
+  });
+
+  document.addEventListener("keyup", (event) => {
+    const key = event.key;
+    if (["w", "a", "s", "d"].includes(key)) {
+      room.send("input", key + "-up");
+    }
   });
 
   render();

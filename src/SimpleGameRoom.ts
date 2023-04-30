@@ -22,30 +22,33 @@ export class SimpleGameRoom extends Room<GameState> {
     this.setState(new GameState());
 
     // Register the "move" message handler
-    this.onMessage("move", (client, key) => {
-      let dx = 0;
-      let dy = 0;
-
-      switch (key) {
-        case "w":
-          dy = -0.01;
-          break;
-        case "a":
-          dx = -0.01;
-          break;
-        case "s":
-          dy = 0.01;
-          break;
-        case "d":
-          dx = 0.01;
-          break;
-      }
-
-      if (this.state.players.has(client.sessionId)) {
-          const player = this.state.players.get(client.sessionId);
-          player.vx += dx;
-          player.vy += dy;
-      }
+    this.onMessage("input", (client, input) => {
+        if (this.state.players.has(client.sessionId)) {
+            const player = this.state.players.get(client.sessionId);
+            
+            switch (input) {
+                case "w-down":
+                    player.accel = SimpleGameStatics.acceleration;
+                    break;
+                case "s-down":
+                    player.accel = -1 * SimpleGameStatics.acceleration;
+                    break;
+                case "a-down":
+                    player.vr = -1 * SimpleGameStatics.angularAcceleration;
+                    break;
+                case "d-down":
+                    player.vr = SimpleGameStatics.angularAcceleration;
+                    break;
+                case "a-up":
+                case "d-up":
+                    player.vr = 0;
+                    break;
+                case "w-up":
+                case "s-up":
+                    player.accel = 0;
+                    break;
+            }
+        }
     });
 
     // Set up the game loop
@@ -68,22 +71,28 @@ export class SimpleGameRoom extends Room<GameState> {
   }
 
   update(deltaTime) {
-      this.state.players.forEach((player, sessionId) => {
-          player.x += player.vx * deltaTime;
-          player.y += player.vy * deltaTime;
+    this.state.players.forEach((player, sessionId) => {
+      player.vx += Math.cos(player.direction) * player.accel + SimpleGameStatics.drag * player.vx;
+      player.vy += Math.sin(player.direction) * player.accel + SimpleGameStatics.drag * player.vy;
 
-          if (player.x > SimpleGameStatics.playAreaWidth) {
-              player.x = 0;
-          } else if (player.x < 0 ) {
-              player.x = SimpleGameStatics.playAreaWidth;
-          }
+      player.x += player.vx * deltaTime;
+      player.y += player.vy * deltaTime;
+      player.direction += player.vr * deltaTime;
+
+      if (player.x > SimpleGameStatics.playAreaWidth) {
+          player.x = 0;
+      } else if (player.x < 0 ) {
+          player.x = SimpleGameStatics.playAreaWidth;
+      }
           
-          if (player.y > SimpleGameStatics.playAreaHeight) {
-              player.y = 0;
-          } else if (player.y < 0 ) {
-              player.y = SimpleGameStatics.playAreaHeight;
-          }
-      });
+      if (player.y > SimpleGameStatics.playAreaHeight) {
+          player.y = 0;
+      } else if (player.y < 0 ) {
+          player.y = SimpleGameStatics.playAreaHeight;
+      }
+
+      player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
+    });
   }
 }
 
