@@ -3,7 +3,7 @@ import express from "express";
 import path from 'path';
 import serveIndex from 'serve-index';
 import { Server, Room } from "colyseus";
-import { GameState } from "./GameState";
+import { GameState, Player } from "./GameState";
 
 const app = express();
 app.use(express.json());
@@ -41,17 +41,33 @@ export class GameRoom extends Room<GameState> {
           break;
       }
 
-      this.state.movePlayer(client.sessionId, x, y);
+      if (this.state.players.has(client.sessionId)) {
+          const player = this.state.players.get(client.sessionId);
+          player.x += x;
+          player.y += y;
+      }
     });
+
+    // Set up the game loop
+    this.setSimulationInterval((deltaTime) => this.update(deltaTime));
   }
 
   onJoin(client) {
     console.log("client joined " + client.sessionId)
-    this.state.addPlayer(client.sessionId, Math.random() * 800, Math.random() * 600);
+    this.state.players.set(client.sessionId, new Player(Math.random() * 800, Math.random() * 600));
   }
 
   onLeave(client) {
-    this.state.removePlayer(client.sessionId);
+    console.log("client left " + client.sessionId)
+    this.state.players.delete(client.sessionId);
+  }
+  
+
+  onDispose() {
+    // Cleanup code when the room is disposed
+  }
+
+  update(deltaTime) {
   }
 }
 
