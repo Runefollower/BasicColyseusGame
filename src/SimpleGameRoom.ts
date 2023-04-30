@@ -4,6 +4,7 @@ import path from 'path';
 import serveIndex from 'serve-index';
 import { Server, Room } from "colyseus";
 import { GameState, Player } from "./GameState";
+import { SimpleGameStatics } from "./static/GameStatics";
 
 const app = express();
 app.use(express.json());
@@ -15,36 +16,35 @@ const gameServer = new Server({
   //express: app,
 });
 
-export class GameRoom extends Room<GameState> {
+export class SimpleGameRoom extends Room<GameState> {
   onCreate() {
     console.log("Creation of Game Room")
     this.setState(new GameState());
 
     // Register the "move" message handler
     this.onMessage("move", (client, key) => {
-      console.log("Move")
-      let x = 0;
-      let y = 0;
+      let dx = 0;
+      let dy = 0;
 
       switch (key) {
         case "w":
-          y = -1;
+          dy = -0.01;
           break;
         case "a":
-          x = -1;
+          dx = -0.01;
           break;
         case "s":
-          y = 1;
+          dy = 0.01;
           break;
         case "d":
-          x = 1;
+          dx = 0.01;
           break;
       }
 
       if (this.state.players.has(client.sessionId)) {
           const player = this.state.players.get(client.sessionId);
-          player.x += x;
-          player.y += y;
+          player.vx += dx;
+          player.vy += dy;
       }
     });
 
@@ -68,8 +68,24 @@ export class GameRoom extends Room<GameState> {
   }
 
   update(deltaTime) {
+      this.state.players.forEach((player, sessionId) => {
+          player.x += player.vx * deltaTime;
+          player.y += player.vy * deltaTime;
+
+          if (player.x > SimpleGameStatics.playAreaWidth) {
+              player.x = 0;
+          } else if (player.x < 0 ) {
+              player.x = SimpleGameStatics.playAreaWidth;
+          }
+          
+          if (player.y > SimpleGameStatics.playAreaHeight) {
+              player.y = 0;
+          } else if (player.y < 0 ) {
+              player.y = SimpleGameStatics.playAreaHeight;
+          }
+      });
   }
 }
 
-gameServer.define("game", GameRoom);
+gameServer.define("game", SimpleGameRoom);
 gameServer.listen(2567);
