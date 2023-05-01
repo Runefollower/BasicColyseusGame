@@ -3,7 +3,7 @@ import express from "express";
 import path from 'path';
 import serveIndex from 'serve-index';
 import { Server, Room } from "colyseus";
-import { GameState, Player } from "./GameState";
+import { GameState, Player, Laser } from "./GameState";
 import { SimpleGameStatics } from "./static/GameStatics";
 
 const app = express();
@@ -51,6 +51,19 @@ export class SimpleGameRoom extends Room<GameState> {
         }
     });
 
+    this.onMessage("fire", (client) => {
+      const player = this.state.players.get(client.sessionId);
+      if (player) {
+        this.state.lasers.push(new Laser(
+            player.x + Math.cos(player.direction) * SimpleGameStatics.playerRadius, 
+            player.y + Math.sin(player.direction) * SimpleGameStatics.playerRadius, 
+            Math.cos(player.direction) * SimpleGameStatics.laserSpeed,
+            Math.sin(player.direction) * SimpleGameStatics.laserSpeed,
+            player.direction));
+      }
+    });
+
+
     // Set up the game loop
     this.setSimulationInterval((deltaTime) => this.update(deltaTime));
   }
@@ -92,6 +105,39 @@ export class SimpleGameRoom extends Room<GameState> {
       }
 
       player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
+    });
+
+      // Update laser positions
+    for (const laser of this.state.lasers) {
+      laser.x += laser.vx * deltaTime;
+      laser.y += laser.vy * deltaTime;
+    }
+
+    // Check for collisions between lasers and ships
+    for (const laser of this.state.lasers) {
+      for (const [sessionId, player] of this.state.players.entries()) {
+        const dx = laser.x - player.x;
+        const dy = laser.y - player.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance <= SimpleGameStatics.playerRadius) {
+          // Laser hit a ship, remove the ship and the laser
+          console.log("Player " + sessionId + " hit");
+          this.state.players.delete(sessionId);
+          this.state.lasers.splice(this.state.lasers.indexOf(laser), 1);
+          break;
+        }
+      }
+    }
+
+    // Remove lasers that are out of bounds
+    this.state.lasers = this.state.lasers.filter((laser) => {
+      return (
+        laser.x >= 0 &&
+        laser.x <= SimpleGameStatics.playAreaWidth &&
+        laser.y >= 0 &&
+        laser.y <= SimpleGameStatics.playAreaHeight
+      );
     });
   }
 }
