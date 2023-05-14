@@ -4,12 +4,12 @@ const ctx = canvas.getContext("2d");
 const radius = 10;
 
 //To keep track the time of the last server update
-lastStateUpdate = 0.0;
+let lastStateUpdate = 0.0;
 
 //For counting the number of frame updates since the
 //last server update
-framesBetweenState = 0;
-maxFramesBetweenState = 0;
+let framesBetweenState = 0;
+let maxFramesBetweenState = 0;
 
 const client = new Colyseus.Client("ws://localhost:2567");
 let room;
@@ -134,7 +134,7 @@ function drawSpaceship(x, y, direction, color, accel) {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  timeStepUpdate = performance.now() - lastStateUpdate;
+  let timeStepUpdate = performance.now() - lastStateUpdate;
 
   //Rendering...  loop through clients and render to screen
   //updating the position for latency from last update
