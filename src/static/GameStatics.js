@@ -8,4 +8,5 @@ export class SimpleGameStatics {
     static drag = -0.01;
     static laserSpeed = .4;
     static playerRadius = 10;
+    static fireDelayInterval = 200; // every 200 ms
 }

@@ -24,7 +24,7 @@ export class SimpleGameRoom extends Room<GameState> {
     // Register the "move" message handler
     this.onMessage("input", (client, input) => {
       if (this.state.players.has(client.sessionId)) {
-        const player = this.state.players.get(client.sessionId);
+        let player = this.state.players.get(client.sessionId);
 
         switch (input) {
           case "w-down":
@@ -46,6 +46,30 @@ export class SimpleGameRoom extends Room<GameState> {
           case "w-up":
           case "s-up":
             player.accel = 0;
+            break;
+          case "fire-down":
+            player.firing = true;
+            if (!player.fireInterval) {
+              player.fireInterval = setInterval(() => {
+                if (player.firing) {
+                  this.state.lasers.push(new Laser(
+                    player.x + Math.cos(player.direction) * SimpleGameStatics.playerRadius,
+                    player.y + Math.sin(player.direction) * SimpleGameStatics.playerRadius,
+                    Math.cos(player.direction) * SimpleGameStatics.laserSpeed,
+                    Math.sin(player.direction) * SimpleGameStatics.laserSpeed,
+                    player.direction
+                  ));
+                } else {
+                  clearInterval(player.fireInterval);
+                  player.fireInterval = null;
+                }
+              }, SimpleGameStatics.fireDelayInterval);
+            }
+
+            break;
+
+          case "fire-up":
+            player.firing = false;
             break;
         }
       }
@@ -74,7 +98,13 @@ export class SimpleGameRoom extends Room<GameState> {
   }
 
   onLeave(client) {
-    console.log("client left " + client.sessionId)
+    console.log("client left " + client.sessionId);
+
+    const player = this.state.players.get(client.sessionId);
+    if (player && player.fireInterval) {
+      clearInterval(player.fireInterval);
+    }
+
     this.state.players.delete(client.sessionId);
   }
 

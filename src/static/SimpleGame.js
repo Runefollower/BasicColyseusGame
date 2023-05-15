@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (["w", "a", "s", "d"].includes(key)) {
       room.send("input", key + "-down");
     } else if (key === " ") {
-      room.send("fire");
+      room.send("input", "fire-down");
     }
   });
 
@@ -97,6 +97,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const key = event.key;
     if (["w", "a", "s", "d"].includes(key)) {
       room.send("input", key + "-up");
+    } else if (event.key === " ") {
+      room.send("input", "fire-up");
     }
   });
 

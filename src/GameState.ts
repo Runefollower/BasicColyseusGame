@@ -22,6 +22,11 @@ export class Player extends Schema {
   @type("number")
   accel: number;
 
+  @type("boolean")
+  firing: boolean;
+
+  fireInterval: any;
+
   constructor(x: number, y: number) {
     super();
     this.x = x;
@@ -31,6 +36,7 @@ export class Player extends Schema {
     this.direction = 0.0;
     this.vr = 0.0;
     this.accel = 0.0;
+    this.firing = false;
   }
 }
 
