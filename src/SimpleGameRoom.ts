@@ -8,7 +8,7 @@ import { SimpleGameStatics } from "./static/GameStatics";
 
 const app = express();
 app.use(express.json());
-app.use('/', serveIndex(path.join(__dirname, "static"), {'icons': true}))
+app.use('/', serveIndex(path.join(__dirname, "static"), { 'icons': true }))
 app.use('/', express.static(path.join(__dirname, "static")));
 
 const gameServer = new Server({
@@ -23,43 +23,43 @@ export class SimpleGameRoom extends Room<GameState> {
 
     // Register the "move" message handler
     this.onMessage("input", (client, input) => {
-        if (this.state.players.has(client.sessionId)) {
-            const player = this.state.players.get(client.sessionId);
-            
-            switch (input) {
-                case "w-down":
-                    player.accel = SimpleGameStatics.acceleration;
-                    break;
-                case "s-down":
-                    player.accel = -1 * SimpleGameStatics.acceleration;
-                    break;
-                case "a-down":
-                    player.vr = -1 * SimpleGameStatics.angularAcceleration;
-                    break;
-                case "d-down":
-                    player.vr = SimpleGameStatics.angularAcceleration;
-                    break;
-                case "a-up":
-                case "d-up":
-                    player.vr = 0;
-                    break;
-                case "w-up":
-                case "s-up":
-                    player.accel = 0;
-                    break;
-            }
+      if (this.state.players.has(client.sessionId)) {
+        const player = this.state.players.get(client.sessionId);
+
+        switch (input) {
+          case "w-down":
+            player.accel = SimpleGameStatics.acceleration;
+            break;
+          case "s-down":
+            player.accel = -1 * SimpleGameStatics.acceleration;
+            break;
+          case "a-down":
+            player.vr = -1 * SimpleGameStatics.angularAcceleration;
+            break;
+          case "d-down":
+            player.vr = SimpleGameStatics.angularAcceleration;
+            break;
+          case "a-up":
+          case "d-up":
+            player.vr = 0;
+            break;
+          case "w-up":
+          case "s-up":
+            player.accel = 0;
+            break;
         }
+      }
     });
 
     this.onMessage("fire", (client) => {
       const player = this.state.players.get(client.sessionId);
       if (player) {
         this.state.lasers.push(new Laser(
-            player.x + Math.cos(player.direction) * SimpleGameStatics.playerRadius, 
-            player.y + Math.sin(player.direction) * SimpleGameStatics.playerRadius, 
-            Math.cos(player.direction) * SimpleGameStatics.laserSpeed,
-            Math.sin(player.direction) * SimpleGameStatics.laserSpeed,
-            player.direction));
+          player.x + Math.cos(player.direction) * SimpleGameStatics.playerRadius,
+          player.y + Math.sin(player.direction) * SimpleGameStatics.playerRadius,
+          Math.cos(player.direction) * SimpleGameStatics.laserSpeed,
+          Math.sin(player.direction) * SimpleGameStatics.laserSpeed,
+          player.direction));
       }
     });
 
@@ -77,7 +77,7 @@ export class SimpleGameRoom extends Room<GameState> {
     console.log("client left " + client.sessionId)
     this.state.players.delete(client.sessionId);
   }
-  
+
 
   onDispose() {
     // Cleanup code when the room is disposed
@@ -93,21 +93,21 @@ export class SimpleGameRoom extends Room<GameState> {
       player.direction += player.vr * deltaTime;
 
       if (player.x > SimpleGameStatics.playAreaWidth) {
-          player.x = 0;
-      } else if (player.x < 0 ) {
-          player.x = SimpleGameStatics.playAreaWidth;
+        player.x = 0;
+      } else if (player.x < 0) {
+        player.x = SimpleGameStatics.playAreaWidth;
       }
-          
+
       if (player.y > SimpleGameStatics.playAreaHeight) {
-          player.y = 0;
-      } else if (player.y < 0 ) {
-          player.y = SimpleGameStatics.playAreaHeight;
+        player.y = 0;
+      } else if (player.y < 0) {
+        player.y = SimpleGameStatics.playAreaHeight;
       }
 
       player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
     });
 
-      // Update laser positions
+    // Update laser positions
     for (const laser of this.state.lasers) {
       laser.x += laser.vx * deltaTime;
       laser.y += laser.vy * deltaTime;
