@@ -11,7 +11,8 @@ const clientFiles = [
 ];
 
 const serverFiles = [
-  { path: 'SimpleGameRoom.ts', description: 'This is the main server side code' },
+  { path: 'SimpleGameRoom.ts', description: 'This is the server side game room code' },
+  { path: 'SimpleGameLogic.ts', description: 'This is the main server game logic code' },
   { path: 'GameState.ts', description: 'This defines the game state that is shared with the client' },
 ];
 
