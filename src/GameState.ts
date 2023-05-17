@@ -25,6 +25,9 @@ export class Player extends Schema {
   @type("boolean")
   firing: boolean;
 
+  @type("number")
+  lastFired: number;
+
   fireInterval: any;
 
   constructor(x: number, y: number) {
@@ -37,6 +40,7 @@ export class Player extends Schema {
     this.vr = 0.0;
     this.accel = 0.0;
     this.firing = false;
+    this.lastFired = 0;
   }
 }
 

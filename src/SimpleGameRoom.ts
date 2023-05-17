@@ -49,44 +49,13 @@ export class SimpleGameRoom extends Room<GameState> {
             break;
           case "fire-down":
             player.firing = true;
-            if (!player.fireInterval) {
-              player.fireInterval = setInterval(() => {
-                if (player.firing) {
-                  this.state.lasers.push(new Laser(
-                    player.x + Math.cos(player.direction) * SimpleGameStatics.playerRadius,
-                    player.y + Math.sin(player.direction) * SimpleGameStatics.playerRadius,
-                    Math.cos(player.direction) * SimpleGameStatics.laserSpeed,
-                    Math.sin(player.direction) * SimpleGameStatics.laserSpeed,
-                    player.direction
-                  ));
-                } else {
-                  clearInterval(player.fireInterval);
-                  player.fireInterval = null;
-                }
-              }, SimpleGameStatics.fireDelayInterval);
-            }
-
             break;
-
           case "fire-up":
             player.firing = false;
             break;
         }
       }
     });
-
-    this.onMessage("fire", (client) => {
-      const player = this.state.players.get(client.sessionId);
-      if (player) {
-        this.state.lasers.push(new Laser(
-          player.x + Math.cos(player.direction) * SimpleGameStatics.playerRadius,
-          player.y + Math.sin(player.direction) * SimpleGameStatics.playerRadius,
-          Math.cos(player.direction) * SimpleGameStatics.laserSpeed,
-          Math.sin(player.direction) * SimpleGameStatics.laserSpeed,
-          player.direction));
-      }
-    });
-
 
     // Set up the game loop
     this.setSimulationInterval((deltaTime) => this.update(deltaTime));
@@ -135,6 +104,19 @@ export class SimpleGameRoom extends Room<GameState> {
       }
 
       player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
+
+
+
+      if (player.firing && (this.clock.elapsedTime - player.lastFired >= SimpleGameStatics.fireDelayInterval)) {
+        this.state.lasers.push(new Laser(
+          player.x + Math.cos(player.direction) * SimpleGameStatics.playerRadius,
+          player.y + Math.sin(player.direction) * SimpleGameStatics.playerRadius,
+          Math.cos(player.direction) * SimpleGameStatics.laserSpeed,
+          Math.sin(player.direction) * SimpleGameStatics.laserSpeed,
+          player.direction
+        ));
+        player.lastFired = this.clock.elapsedTime;
+      }
     });
 
     // Update laser positions
