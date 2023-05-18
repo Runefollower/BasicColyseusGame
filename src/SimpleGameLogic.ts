@@ -15,6 +15,11 @@ let SimpleGameMetrics = {
 }
 
 
+function logWithTimestamp(...messages) {
+  const timestamp = new Date().toISOString();
+  console.log(timestamp, ...messages);
+}
+
 export class SimpleGameLogic {
   state: GameState;
 
@@ -137,7 +142,7 @@ export class SimpleGameLogic {
           // Remove the laser
           this.state.lasers.splice(this.state.lasers.indexOf(laser), 1);
 
-          console.log("Player " + attacker.username + " hit " + player.username);
+          logWithTimestamp("PlayerHit    " + attacker.username + " hit " + player.username + ", " + attacker.username + " score:" + attacker.score);
           break;
         }
       }

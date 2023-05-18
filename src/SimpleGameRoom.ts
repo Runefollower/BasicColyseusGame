@@ -17,11 +17,16 @@ const gameServer = new Server({
   //express: app,
 });
 
+function logWithTimestamp(...messages) {
+  const timestamp = new Date().toISOString();
+  console.log(timestamp, ...messages);
+}
+
 export class SimpleGameRoom extends Room<GameState> {
   gameLogic: SimpleGameLogic;
 
   onCreate() {
-    console.log("Creation of Game Room")
+    logWithTimestamp("CreateGameRoom")
     this.setState(new GameState());
     this.gameLogic = new SimpleGameLogic(this.state);
 
@@ -35,7 +40,7 @@ export class SimpleGameRoom extends Room<GameState> {
   }
 
   onJoin(client, options) {
-    console.log("client joined ClientID:" + client.sessionId + " Username:" + options.username)
+    logWithTimestamp("ClientJoined ClientID:" + client.sessionId + " Username:" + options.username)
     this.gameLogic.addPlayer(client, options.username);
 
     // Send initialization data to the client
@@ -43,7 +48,7 @@ export class SimpleGameRoom extends Room<GameState> {
   }
 
   onLeave(client) {
-    console.log("client left " + client.sessionId);
+    logWithTimestamp("ClientLeft   ClientID:" + client.sessionId);
     this.gameLogic.removePlayer(client);
   }
 
