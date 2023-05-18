@@ -6,7 +6,6 @@ const prefixPath = "src/";
 const clientFiles = [
   { path: 'static/SimpleGame.js', description: 'This is the main client side code' },
   { path: 'static/SpaceShipRenderer.js', description: 'This is the code to render the spaceship and laser' },
-  { path: 'static/GameStatics.js', description: 'This defines static game values' },
   { path: 'static/index.html', description: 'This is the client html code' },
 ];
 

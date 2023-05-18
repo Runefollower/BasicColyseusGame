@@ -17,10 +17,7 @@ let ssRender = new SpaceShipRender();
 
 const client = new Colyseus.Client("ws://localhost:2567");
 let room;
-
-
-
-
+let gameMetrics;
 
 
 
@@ -74,6 +71,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     // frames without update
     lastStateUpdate = performance.now();
     framesBetweenState = 0;
+  });
+
+  room.onMessage('init', (message) => {
+    // retrive initialization metrics
+    gameMetrics = message;
+
+    // Resize canvas to match game area dimensions
+    canvas.width = gameMetrics.playAreaWidth;
+    canvas.height = gameMetrics.playAreaHeight;
   });
 
   room.onStateChange(() => {

@@ -1,6 +1,19 @@
 import { Client } from "colyseus";
 import { GameState, Player, Laser } from "./GameState";
-import { SimpleGameStatics } from "./static/GameStatics";
+//import { SimpleGameStatics } from "./static/GameStatics";
+
+
+let SimpleGameMetrics = {
+  playAreaWidth: 1200,
+  playAreaHeight: 800,
+  acceleration: 0.01,
+  angularAcceleration: 0.005,
+  drag: -0.01,
+  laserSpeed: .4,
+  playerRadius: 10,
+  fireDelayInterval: 200,
+}
+
 
 export class SimpleGameLogic {
   state: GameState;
@@ -9,22 +22,26 @@ export class SimpleGameLogic {
     this.state = state;
   }
 
+  getInitializationData() {
+    return SimpleGameMetrics;
+  }
+
   handleInput(client: Client, input: string) {
     if (this.state.players.has(client.sessionId)) {
       let player = this.state.players.get(client.sessionId);
 
       switch (input) {
         case "w-down":
-          player.accel = SimpleGameStatics.acceleration;
+          player.accel = SimpleGameMetrics.acceleration;
           break;
         case "s-down":
-          player.accel = -1 * SimpleGameStatics.acceleration;
+          player.accel = -1 * SimpleGameMetrics.acceleration;
           break;
         case "a-down":
-          player.vr = -1 * SimpleGameStatics.angularAcceleration;
+          player.vr = -1 * SimpleGameMetrics.angularAcceleration;
           break;
         case "d-down":
-          player.vr = SimpleGameStatics.angularAcceleration;
+          player.vr = SimpleGameMetrics.angularAcceleration;
           break;
         case "a-up":
         case "d-up":
@@ -54,35 +71,35 @@ export class SimpleGameLogic {
 
   update(deltaTime: number, elapsedTime: number) {
     this.state.players.forEach((player, sessionId) => {
-      player.vx += Math.cos(player.direction) * player.accel + SimpleGameStatics.drag * player.vx;
-      player.vy += Math.sin(player.direction) * player.accel + SimpleGameStatics.drag * player.vy;
+      player.vx += Math.cos(player.direction) * player.accel + SimpleGameMetrics.drag * player.vx;
+      player.vy += Math.sin(player.direction) * player.accel + SimpleGameMetrics.drag * player.vy;
 
       player.x += player.vx * deltaTime;
       player.y += player.vy * deltaTime;
       player.direction += player.vr * deltaTime;
 
-      if (player.x > SimpleGameStatics.playAreaWidth) {
+      if (player.x > SimpleGameMetrics.playAreaWidth) {
         player.x = 0;
       } else if (player.x < 0) {
-        player.x = SimpleGameStatics.playAreaWidth;
+        player.x = SimpleGameMetrics.playAreaWidth;
       }
 
-      if (player.y > SimpleGameStatics.playAreaHeight) {
+      if (player.y > SimpleGameMetrics.playAreaHeight) {
         player.y = 0;
       } else if (player.y < 0) {
-        player.y = SimpleGameStatics.playAreaHeight;
+        player.y = SimpleGameMetrics.playAreaHeight;
       }
 
       player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
 
 
 
-      if (player.firing && (elapsedTime - player.lastFired >= SimpleGameStatics.fireDelayInterval)) {
+      if (player.firing && (elapsedTime - player.lastFired >= SimpleGameMetrics.fireDelayInterval)) {
         this.state.lasers.push(new Laser(
-          player.x + Math.cos(player.direction) * SimpleGameStatics.playerRadius,
-          player.y + Math.sin(player.direction) * SimpleGameStatics.playerRadius,
-          Math.cos(player.direction) * SimpleGameStatics.laserSpeed,
-          Math.sin(player.direction) * SimpleGameStatics.laserSpeed,
+          player.x + Math.cos(player.direction) * SimpleGameMetrics.playerRadius,
+          player.y + Math.sin(player.direction) * SimpleGameMetrics.playerRadius,
+          Math.cos(player.direction) * SimpleGameMetrics.laserSpeed,
+          Math.sin(player.direction) * SimpleGameMetrics.laserSpeed,
           player.direction
         ));
         player.lastFired = elapsedTime;
@@ -102,7 +119,7 @@ export class SimpleGameLogic {
         const dy = laser.y - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance <= SimpleGameStatics.playerRadius) {
+        if (distance <= SimpleGameMetrics.playerRadius) {
           // Laser hit a ship, remove the ship and the laser
           console.log("Player " + sessionId + " hit");
           this.state.players.delete(sessionId);
@@ -116,9 +133,9 @@ export class SimpleGameLogic {
     this.state.lasers = this.state.lasers.filter((laser) => {
       return (
         laser.x >= 0 &&
-        laser.x <= SimpleGameStatics.playAreaWidth &&
+        laser.x <= SimpleGameMetrics.playAreaWidth &&
         laser.y >= 0 &&
-        laser.y <= SimpleGameStatics.playAreaHeight
+        laser.y <= SimpleGameMetrics.playAreaHeight
       );
     });
   }

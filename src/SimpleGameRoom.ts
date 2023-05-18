@@ -37,6 +37,9 @@ export class SimpleGameRoom extends Room<GameState> {
   onJoin(client) {
     console.log("client joined " + client.sessionId)
     this.gameLogic.addPlayer(client);
+
+    // Send initialization data to the client
+    client.send('init', this.gameLogic.getInitializationData() );
   }
 
   onLeave(client) {
