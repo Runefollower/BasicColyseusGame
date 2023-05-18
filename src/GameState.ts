@@ -1,6 +1,9 @@
 import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 
 export class Player extends Schema {
+  @type("string")
+  username: string;
+
   @type("number")
   x: number;
 
@@ -28,10 +31,14 @@ export class Player extends Schema {
   @type("number")
   lastFired: number;
 
+  @type("number")
+  score: number;
+
   fireInterval: any;
 
-  constructor(x: number, y: number) {
+  constructor(username: string, x: number, y: number) {
     super();
+    this.username = username;
     this.x = x;
     this.y = y;
     this.vx = 0.0;
@@ -41,6 +48,7 @@ export class Player extends Schema {
     this.accel = 0.0;
     this.firing = false;
     this.lastFired = 0;
+    this.score = 0;
   }
 }
 
@@ -60,13 +68,17 @@ export class Laser extends Schema {
   @type("number")
   direction: number;
 
-  constructor(x: number, y: number, vx: number, vy: number, direction: number) {
+  @type("string")
+  ownerSessionId: string;
+
+  constructor(x: number, y: number, vx: number, vy: number, direction: number, ownerSessionId: string) {
     super();
     this.x = x;
     this.y = y;
     this.vx = vx;
     this.vy = vy;
     this.direction = direction;
+    this.ownerSessionId = ownerSessionId;
   }
 }
 

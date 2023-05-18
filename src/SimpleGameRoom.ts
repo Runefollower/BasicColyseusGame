@@ -34,9 +34,9 @@ export class SimpleGameRoom extends Room<GameState> {
     this.setSimulationInterval((deltaTime) => this.gameLogic.update(deltaTime, this.clock.elapsedTime));
   }
 
-  onJoin(client) {
-    console.log("client joined " + client.sessionId)
-    this.gameLogic.addPlayer(client);
+  onJoin(client, options) {
+    console.log("client joined ClientID:" + client.sessionId + " Username:" + options.username)
+    this.gameLogic.addPlayer(client, options.username);
 
     // Send initialization data to the client
     client.send('init', this.gameLogic.getInitializationData() );

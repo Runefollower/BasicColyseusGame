@@ -61,8 +61,8 @@ export class SimpleGameLogic {
     }
   }
 
-  addPlayer(client: Client) {
-    this.state.players.set(client.sessionId, new Player(Math.random() * 800, Math.random() * 600));
+  addPlayer(client: Client, username: string) {
+    this.state.players.set(client.sessionId, new Player(username, Math.random() * 800, Math.random() * 600));
   }
 
   removePlayer(client: Client) {
@@ -100,7 +100,8 @@ export class SimpleGameLogic {
           player.y + Math.sin(player.direction) * SimpleGameMetrics.playerRadius,
           Math.cos(player.direction) * SimpleGameMetrics.laserSpeed,
           Math.sin(player.direction) * SimpleGameMetrics.laserSpeed,
-          player.direction
+          player.direction,
+          sessionId
         ));
         player.lastFired = elapsedTime;
       }
@@ -120,10 +121,23 @@ export class SimpleGameLogic {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance <= SimpleGameMetrics.playerRadius) {
-          // Laser hit a ship, remove the ship and the laser
-          console.log("Player " + sessionId + " hit");
-          this.state.players.delete(sessionId);
+          // Laser hit a ship, increment score, remove the ship and the laser
+          const attacker = this.state.players.get(laser.ownerSessionId);
+          if (attacker) {
+            attacker.score += 1;
+          }
+
+          // Respawn the hit player in a random location
+          player.x = Math.random() * SimpleGameMetrics.playAreaWidth;
+          player.y = Math.random() * SimpleGameMetrics.playAreaHeight;
+          player.vx = 0.0;
+          player.vy = 0.0;
+          player.direction = Math.random() * 2 * Math.PI;
+
+          // Remove the laser
           this.state.lasers.splice(this.state.lasers.indexOf(laser), 1);
+
+          console.log("Player " + attacker.username + " hit " + player.username);
           break;
         }
       }

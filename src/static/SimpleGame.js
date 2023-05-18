@@ -51,6 +51,9 @@ function render() {
     );
   });
 
+  // Rendering game scores.
+  renderScores();
+
   //Keep track of how many frames have been rendered
   //without a server update, and keep track of the
   //max max frames without update
@@ -62,8 +65,34 @@ function render() {
   requestAnimationFrame(() => render());
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  room = await client.joinOrCreate("game");
+// This function will render the scores.
+function renderScores() {
+  const sortedPlayers = getSortedPlayers();
+  ctx.fillStyle = 'black';
+  ctx.font = '16px Arial';
+  ctx.textAlign = 'right';
+  sortedPlayers.forEach(([id, player], index) => {
+    ctx.fillText(`${player.username}: ${player.score}`, canvas.width - 10, 20 + index * 20);
+  });
+}
+
+function getSortedPlayers() {
+  const playersArray = Array.from(room.state.players.entries());
+  return playersArray.sort((a, b) => b[1].score - a[1].score);
+}
+
+document.getElementById("connect").addEventListener("click", async () => {
+  const username = document.getElementById("username").value;
+
+  if (!username.trim()) {
+    alert("Please enter a username.");
+    return;
+  }
+
+  document.getElementById("game-init").style.display = "none";
+  document.getElementById("game-connect").style.display = "block";
+
+  room = await client.joinOrCreate("game", { username });
 
   room.onStateChange.once(() => {
     // Initial state received from the server
