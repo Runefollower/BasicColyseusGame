@@ -58,4 +58,4 @@ export class SimpleGameRoom extends Room<GameState> {
 }
 
 gameServer.define("game", SimpleGameRoom);
-gameServer.listen(2567);
+gameServer.listen(3000);
