@@ -15,7 +15,8 @@ let maxFramesBetweenState = 0;
 
 let ssRender = new SpaceShipRender();
 
-const client = new Colyseus.Client("ws://localhost:2567");
+const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+const client = new Colyseus.Client(`${protocol}://${window.location.hostname}:${window.location.port}`);
 let room;
 let gameMetrics;
 
