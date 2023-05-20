@@ -2,18 +2,18 @@
     "name": "simplecolyseusserver",
     "version": "1.0.0",
     "description": "Simple prototype colyseus based game",
-    "main": "dist/SimpleGameRoom.js",
+    "main": "src/server/SimpleGameRoom.js",
     "scripts": {
-        "build": "tsc & npm run copy",
-        "start": "ts-node src/server/SimpleGameRoom.ts",
-        "start:dev": "ts-node-dev --watch \"src/**/*\" --respawn --transpile-only src/server/SimpleGameRoom.ts ",
+        "build": "tsc & npm run copy & npm run build:client",
+        "build:client": "webpack",
+        "start": "ts-node src/server/SimpleGameRoom.ts -d",
+        "start:dev": "ts-node-dev --watch \"src/**/*\" --respawn --transpile-only src/server/SimpleGameRoom.ts -d ",
         "start:prod": "node dist/server/SimpleGameRoom.js",
         "test": "echo \"Error: no test specified\" && exit 1",
         "copy": "copyfiles -u 1 \"src/**/*.html\" \"dist/\""
     },
     "author": "",
     "license": "ISC",
-    "type": "module",
     "dependencies": {
         "colyseus": "^0.14.24",
         "colyseus.js": "^0.14.13",
@@ -21,9 +21,14 @@
         "serve-index": "^1.8.0"
     },
     "devDependencies": {
+        "copy-webpack-plugin": "^11.0.0",
         "copyfiles": "^2.4.1",
+        "html-webpack-plugin": "^5.5.1",
+        "ts-loader": "^9.4.2",
         "ts-node": "^10.9.1",
         "ts-node-dev": "^2.0.0",
-        "typescript": "^5.0.4"
+        "typescript": "^5.0.4",
+        "webpack": "^5.83.1",
+        "webpack-cli": "^5.1.1"
     }
 }

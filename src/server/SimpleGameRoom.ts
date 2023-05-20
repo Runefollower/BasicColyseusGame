@@ -7,10 +7,19 @@ import { Server, Room } from "colyseus";
 import { GameState } from "./GameState";
 import { SimpleGameLogic } from "./SimpleGameLogic";
 
+let staticRoot="../web";
+if (process.argv.includes('-d')) {
+  logWithTimestamp("Running in dev mode");
+  staticRoot="../../dist/web";
+} else {
+  logWithTimestamp("Running in prod mode");
+}
+
+
 const app = express();
 app.use(express.json());
-app.use('/', serveIndex(path.join(__dirname, "../client"), { 'icons': true }))
-app.use('/', express.static(path.join(__dirname, "../client")));
+app.use('/', serveIndex(path.join(__dirname, staticRoot), { 'icons': true }))
+app.use('/', express.static(path.join(__dirname, staticRoot)));
 
 const gameServer = new Server({
   server: http.createServer(app),
