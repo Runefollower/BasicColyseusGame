@@ -4,13 +4,13 @@ import path from 'path';
 import serveIndex from 'serve-index';
 
 import { Server, Room } from "colyseus";
-import { GameState, Player } from "./GameState";
+import { GameState } from "./GameState";
 import { SimpleGameLogic } from "./SimpleGameLogic";
 
 const app = express();
 app.use(express.json());
-app.use('/', serveIndex(path.join(__dirname, "static"), { 'icons': true }))
-app.use('/', express.static(path.join(__dirname, "static")));
+app.use('/', serveIndex(path.join(__dirname, "../client"), { 'icons': true }))
+app.use('/', express.static(path.join(__dirname, "../client")));
 
 const gameServer = new Server({
   server: http.createServer(app),

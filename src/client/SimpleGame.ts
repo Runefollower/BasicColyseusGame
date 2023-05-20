@@ -1,9 +1,8 @@
-import { SpaceShipRender } from "./SpaceShipRenderer.js";
+import { SpaceShipRender } from "./SpaceShipRenderer";
+import * as Colyseus from 'colyseus.js';
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-
-const radius = 10;
+const canvas = document.getElementById("game") as HTMLCanvasElement;
+const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
 //To keep track the time of the last server update
 let lastStateUpdate = 0.0;
@@ -18,10 +17,12 @@ let maxFramesBetweenState = 0;
 
 let ssRender = new SpaceShipRender();
 
+const gamePrefix="/BasicGameServer/";
+//const gamePrefix="";
 const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 const client = new Colyseus.Client(`${protocol}://${window.location.hostname}:${window.location.port}${gamePrefix}`);
-let room;
-let gameMetrics;
+let room: Colyseus.Room;
+let gameMetrics: any;
 
 
 
@@ -80,7 +81,7 @@ function renderScores() {
   ctx.fillStyle = 'black';
   ctx.font = '16px Arial';
   ctx.textAlign = 'right';
-  sortedPlayers.forEach(([id, player], index) => {
+  (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
     ctx.fillText(`${player.username}: ${player.score}`, canvas.width - 10, 20 + index * 20);
   });
 }
@@ -91,7 +92,8 @@ function getSortedPlayers() {
 }
 
 document.getElementById("connect").addEventListener("click", async () => {
-  const username = document.getElementById("username").value;
+  const username = (document.getElementById("username") as HTMLInputElement).value;
+
 
   if (!username.trim()) {
     alert("Please enter a username.");

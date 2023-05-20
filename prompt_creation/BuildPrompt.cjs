@@ -4,15 +4,15 @@ const prefixPath = "src/";
 
 // Static array of file paths and descriptions
 const clientFiles = [
-  { path: 'static/SimpleGame.js', description: 'This is the main client side code' },
-  { path: 'static/SpaceShipRenderer.js', description: 'This is the code to render the spaceship and laser' },
-  { path: 'static/index.html', description: 'This is the client html code' },
+  { path: 'client/SimpleGame.ts', description: 'This is the main client side code' },
+  { path: 'client/SpaceShipRenderer.ts', description: 'This is the code to render the spaceship and laser' },
+  { path: 'client/index.html', description: 'This is the client html code' },
 ];
 
 const serverFiles = [
-  { path: 'SimpleGameRoom.ts', description: 'This is the server side game room code' },
-  { path: 'SimpleGameLogic.ts', description: 'This is the main server game logic code' },
-  { path: 'GameState.ts', description: 'This defines the game state that is shared with the client' },
+  { path: 'server/SimpleGameRoom.ts', description: 'This is the server side game room code' },
+  { path: 'server/SimpleGameLogic.ts', description: 'This is the main server game logic code' },
+  { path: 'server/GameState.ts', description: 'This defines the game state that is shared with the client' },
 ];
 
 // Static output file path

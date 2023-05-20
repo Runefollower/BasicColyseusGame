@@ -1,6 +1,5 @@
 import { Client } from "colyseus";
 import { GameState, Player, Laser } from "./GameState";
-//import { SimpleGameStatics } from "./static/GameStatics";
 
 
 let SimpleGameMetrics = {

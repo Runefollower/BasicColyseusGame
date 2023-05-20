@@ -4,14 +4,16 @@
     "description": "Simple prototype colyseus based game",
     "main": "dist/SimpleGameRoom.js",
     "scripts": {
-        "build": "tsc",
-        "start": "ts-node src/SimpleGameRoom.ts",
-        "start:dev": "ts-node-dev --watch \"src/**/*\" --respawn --transpile-only src/server.ts ",
-        "start:prod": "node dist/SimpleGameRoom.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "build": "tsc & npm run copy",
+        "start": "ts-node src/server/SimpleGameRoom.ts",
+        "start:dev": "ts-node-dev --watch \"src/**/*\" --respawn --transpile-only src/server/SimpleGameRoom.ts ",
+        "start:prod": "node dist/server/SimpleGameRoom.js",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "copy": "copyfiles -u 1 \"src/**/*.html\" \"dist/\""
     },
     "author": "",
     "license": "ISC",
+    "type": "module",
     "dependencies": {
         "colyseus": "^0.14.24",
         "colyseus.js": "^0.14.13",
@@ -19,6 +21,8 @@
         "serve-index": "^1.8.0"
     },
     "devDependencies": {
+        "copyfiles": "^2.4.1",
+        "ts-node": "^10.9.1",
         "ts-node-dev": "^2.0.0",
         "typescript": "^5.0.4"
     }
