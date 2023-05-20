@@ -4,7 +4,7 @@
     "description": "Simple prototype colyseus based game",
     "main": "src/server/SimpleGameRoom.js",
     "scripts": {
-        "build": "tsc & npm run copy & npm run build:client",
+        "build": "tsc & npm run build:client",
         "build:client": "webpack",
         "start": "ts-node src/server/SimpleGameRoom.ts -d",
         "start:dev": "ts-node-dev --watch \"src/**/*\" --respawn --transpile-only src/server/SimpleGameRoom.ts -d ",

@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "outDir": "./dist",
+        "outDir": "./dist/server",
         "module": "CommonJS",
         "target": "es2019",
         "declaration": true,
@@ -17,6 +17,6 @@
         "lib": ["dom", "ES2019"]
     },
     "include": [
-        "src"
+        "src/server"
     ]
 }
