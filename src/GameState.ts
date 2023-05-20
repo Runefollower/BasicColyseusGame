@@ -68,6 +68,9 @@ export class Laser extends Schema {
   @type("number")
   direction: number;
 
+  @type("number")
+  remainingTime: number;
+
   @type("string")
   ownerSessionId: string;
 
@@ -79,6 +82,7 @@ export class Laser extends Schema {
     this.vy = vy;
     this.direction = direction;
     this.ownerSessionId = ownerSessionId;
+    this.remainingTime = 1000;
   }
 }
 

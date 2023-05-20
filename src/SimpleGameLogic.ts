@@ -103,8 +103,8 @@ export class SimpleGameLogic {
         this.state.lasers.push(new Laser(
           player.x + Math.cos(player.direction) * SimpleGameMetrics.playerRadius,
           player.y + Math.sin(player.direction) * SimpleGameMetrics.playerRadius,
-          Math.cos(player.direction) * SimpleGameMetrics.laserSpeed,
-          Math.sin(player.direction) * SimpleGameMetrics.laserSpeed,
+          (Math.cos(player.direction) * SimpleGameMetrics.laserSpeed) + player.vx,
+          (Math.sin(player.direction) * SimpleGameMetrics.laserSpeed) + player.vy,
           player.direction,
           sessionId
         ));
@@ -112,11 +112,15 @@ export class SimpleGameLogic {
       }
     });
 
-    // Update laser positions
-    for (const laser of this.state.lasers) {
+    // Update laser positions and reduce remaining time
+    this.state.lasers = this.state.lasers.filter((laser) => {
       laser.x += laser.vx * deltaTime;
       laser.y += laser.vy * deltaTime;
-    }
+      laser.remainingTime -= deltaTime;
+
+      // Keep the laser only if the remaining time is greater than zero
+      return laser.remainingTime > 0;
+    });
 
     // Check for collisions between lasers and ships
     for (const laser of this.state.lasers) {
@@ -128,22 +132,25 @@ export class SimpleGameLogic {
         if (distance <= SimpleGameMetrics.playerRadius) {
           // Laser hit a ship, increment score, remove the ship and the laser
           const attacker = this.state.players.get(laser.ownerSessionId);
-          if (attacker) {
+
+          //check that you did not shoot yourself
+          if (attacker && (attacker !== player)) {
             attacker.score += 1;
+
+
+            // Respawn the hit player in a random location
+            player.x = Math.random() * SimpleGameMetrics.playAreaWidth;
+            player.y = Math.random() * SimpleGameMetrics.playAreaHeight;
+            player.vx = 0.0;
+            player.vy = 0.0;
+            player.direction = Math.random() * 2 * Math.PI;
+
+            // Remove the laser
+            this.state.lasers.splice(this.state.lasers.indexOf(laser), 1);
+
+            logWithTimestamp("PlayerHit    " + attacker.username + " hit " + player.username + ", " + attacker.username + " score:" + attacker.score);
+            break;
           }
-
-          // Respawn the hit player in a random location
-          player.x = Math.random() * SimpleGameMetrics.playAreaWidth;
-          player.y = Math.random() * SimpleGameMetrics.playAreaHeight;
-          player.vx = 0.0;
-          player.vy = 0.0;
-          player.direction = Math.random() * 2 * Math.PI;
-
-          // Remove the laser
-          this.state.lasers.splice(this.state.lasers.indexOf(laser), 1);
-
-          logWithTimestamp("PlayerHit    " + attacker.username + " hit " + player.username + ", " + attacker.username + " score:" + attacker.score);
-          break;
         }
       }
     }

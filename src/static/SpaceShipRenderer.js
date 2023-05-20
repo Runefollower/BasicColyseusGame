@@ -15,6 +15,8 @@ class Particle {
     }
   
     update(dt) {
+      this.vx -= .001 * this.vx * dt;
+      this.vy -= .001 * this.vy * dt;
       this.x += this.vx * dt;
       this.y += this.vy * dt;
       this.life -= dt;
@@ -34,10 +36,10 @@ class Particle {
       this.particles = [];
     }
   
-    emit(x, y, direction, speed) {
+    emit(x, y, svx, svy, direction, speed) {
       const angle = direction + (Math.random() - 0.5) * (Math.PI / 6);
-      const vx = Math.cos(angle) * speed;
-      const vy = Math.sin(angle) * speed;
+      const vx = (Math.cos(angle) * speed) + svx;
+      const vy = (Math.sin(angle) * speed) + svy;
       const life = Math.random() * 500 + 500; // Random life between 0.5 and 1 seconds
       this.particles.push(new Particle(x, y, vx, vy, life));
     }
@@ -76,7 +78,7 @@ export class SpaceShipRender {
         this.particleEmitter.update(dt);
     }
 
-    render(x, y, direction, color, accel, ctx) {
+    render(x, y, vx, vy, direction, color, accel, ctx) {
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(direction);
@@ -107,7 +109,7 @@ export class SpaceShipRender {
             // Emit smoke particles
             const smokeX = x - 20 * Math.cos(direction);
             const smokeY = y - 20 * Math.sin(direction);
-            this.particleEmitter.emit(smokeX, smokeY, direction + Math.PI, .03);
+            this.particleEmitter.emit(smokeX, smokeY, vx, vy, direction + Math.PI, .03);
         }
 
         ctx.restore();

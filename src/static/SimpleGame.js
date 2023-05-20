@@ -8,6 +8,9 @@ const radius = 10;
 //To keep track the time of the last server update
 let lastStateUpdate = 0.0;
 
+//To keep track the time of the last frame render
+let lastFrameRender = 0.0;
+
 //For counting the number of frame updates since the
 //last server update
 let framesBetweenState = 0;
@@ -25,7 +28,10 @@ let gameMetrics;
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  let dt = performance.now() - lastStateUpdate;
+  let thisFrameRender = performance.now();
+  let udt = thisFrameRender - lastStateUpdate;
+  let dt = thisFrameRender - lastFrameRender;
+  lastFrameRender = thisFrameRender;
 
   ssRender.update(dt);
 
@@ -34,8 +40,10 @@ function render() {
   room.state.players.forEach((player, sessionId) => {
     const color = sessionId === room.sessionId ? "blue" : "green";
     ssRender.render(
-      player.x + player.vx * dt,
-      player.y + player.vy * dt,
+      player.x + player.vx * udt,
+      player.y + player.vy * udt,
+      player.vx,
+      player.vy,
       player.direction,
       color,
       player.accel,
@@ -45,8 +53,8 @@ function render() {
 
   room.state.lasers.forEach((laser) => {
     ssRender.renderLaser(
-      laser.x + laser.vx * dt,
-      laser.y + laser.vy * dt,
+      laser.x + laser.vx * udt,
+      laser.y + laser.vy * udt,
       laser.direction,
       ctx
     );
