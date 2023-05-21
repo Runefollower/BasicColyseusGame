@@ -1,5 +1,6 @@
 import { Client } from "colyseus";
 import { GameState, Player, Laser } from "./GameState";
+import { logWithTimestamp } from "./ServerTools";
 
 
 let SimpleGameMetrics = {
@@ -13,11 +14,6 @@ let SimpleGameMetrics = {
   fireDelayInterval: 200,
 }
 
-
-function logWithTimestamp(...messages) {
-  const timestamp = new Date().toISOString();
-  console.log(timestamp, ...messages);
-}
 
 export class SimpleGameLogic {
   state: GameState;

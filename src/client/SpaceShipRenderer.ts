@@ -46,7 +46,7 @@ class ParticleEmitter {
     this.particles = [];
   }
 
-  emit(x: number, y: number, svx:number, svy:number, direction: number, speed: number) {
+  emit(x: number, y: number, svx: number, svy: number, direction: number, speed: number) {
     const angle = direction + (Math.random() - 0.5) * (Math.PI / 6);
     const vx = (Math.cos(angle) * speed) + svx;
     const vy = (Math.sin(angle) * speed) + svy;
@@ -96,7 +96,10 @@ export class SpaceShipRender {
     direction: number,
     color: string,
     accel: number,
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
+    name: string,
+    displayName: boolean,
+    displayExhaust: boolean
   ) {
     ctx.save();
     ctx.translate(x, y);
@@ -125,13 +128,25 @@ export class SpaceShipRender {
       ctx.fillStyle = "red";
       ctx.fill();
 
-      // Emit smoke particles
-      const smokeX = x - 20 * Math.cos(direction);
-      const smokeY = y - 20 * Math.sin(direction);
-      this.particleEmitter.emit(smokeX, smokeY, vx, vy, direction + Math.PI, .03);
+      if (displayExhaust) {
+        // Emit smoke particles
+        const smokeX = x - 20 * Math.cos(direction);
+        const smokeY = y - 20 * Math.sin(direction);
+        this.particleEmitter.emit(smokeX, smokeY, vx, vy, direction + Math.PI, .03);
+      }
     }
 
     ctx.restore();
+
+    if (displayName) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = color;
+      const labelMetrics = ctx.measureText(name);
+
+      ctx.fillText(name, labelMetrics.width / 2, labelMetrics.actualBoundingBoxAscent + 10);
+      ctx.restore();
+    }
 
     this.particleEmitter.render(ctx);
   }

@@ -3,14 +3,15 @@ import express from "express";
 import path from 'path';
 import serveIndex from 'serve-index';
 
-import { Server, Room } from "colyseus";
+import { Server, Room, Client } from "colyseus";
 import { GameState } from "./GameState";
 import { SimpleGameLogic } from "./SimpleGameLogic";
+import { logWithTimestamp } from "./ServerTools";
 
-let staticRoot="../web";
+let staticRoot = "../web";
 if (process.argv.includes('-d')) {
   logWithTimestamp("Running in dev mode");
-  staticRoot="../../dist/web";
+  staticRoot = "../../dist/web";
 } else {
   logWithTimestamp("Running in prod mode");
 }
@@ -26,15 +27,21 @@ const gameServer = new Server({
   //express: app,
 });
 
-function logWithTimestamp(...messages) {
-  const timestamp = new Date().toISOString();
-  console.log(timestamp, ...messages);
-}
-
 export class SimpleGameRoom extends Room<GameState> {
   gameLogic: SimpleGameLogic;
 
-  onCreate() {
+  onAuth(client, options, req) {
+    // Perform any authentication or authorization here
+    // You can access request headers or cookies via `req` object
+    // Return true if the client is authorized, otherwise false
+    return true;
+  }
+
+  onInit(options) {
+    // Initialize the room here
+  }
+
+  async onCreate() {
     logWithTimestamp("CreateGameRoom")
     this.setState(new GameState());
     this.gameLogic = new SimpleGameLogic(this.state);
@@ -44,16 +51,21 @@ export class SimpleGameRoom extends Room<GameState> {
       this.gameLogic.handleInput(client, input);
     });
 
+    // Register the "joinGame" message handler
+    this.onMessage("joinGame", (client, input) => {
+      logWithTimestamp("ClientJoined ClientID:" + client.sessionId + " Username:" + input);
+      this.gameLogic.addPlayer(client, input);
+    });
+
     // Set up the game loop
     this.setSimulationInterval((deltaTime) => this.gameLogic.update(deltaTime, this.clock.elapsedTime));
   }
 
-  onJoin(client, options) {
-    logWithTimestamp("ClientJoined ClientID:" + client.sessionId + " Username:" + options.username)
-    this.gameLogic.addPlayer(client, options.username);
+  async onJoin(client) {
+    logWithTimestamp("ClientConnected ClientID:" + client.sessionId );
 
     // Send initialization data to the client
-    client.send('init', this.gameLogic.getInitializationData() );
+    client.send('init', this.gameLogic.getInitializationData());
   }
 
   onLeave(client) {

@@ -15,14 +15,16 @@ let lastFrameRender = 0.0;
 let framesBetweenState = 0;
 let maxFramesBetweenState = 0;
 
+let showPlayerLabels = false;
 let ssRender = new SpaceShipRender();
 
-const gamePrefix="/BasicGameServer/";
+const gamePrefix = "/BasicGameServer/";
 //const gamePrefix="";
 const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 const client = new Colyseus.Client(`${protocol}://${window.location.hostname}:${window.location.port}${gamePrefix}`);
 let room: Colyseus.Room;
 let gameMetrics: any;
+
 
 
 
@@ -48,7 +50,10 @@ function render() {
       player.direction,
       color,
       player.accel,
-      ctx
+      ctx,
+      player.username,
+      showPlayerLabels,
+      true
     );
   });
 
@@ -81,8 +86,38 @@ function renderScores() {
   ctx.fillStyle = 'black';
   ctx.font = '16px Arial';
   ctx.textAlign = 'right';
+
+  let maxWidth = 0;
   (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
-    ctx.fillText(`${player.username}: ${player.score}`, canvas.width - 10, 20 + index * 20);
+    const playerLabel = `${player.username}: ${player.score}`;
+    const textWidth = ctx.measureText(playerLabel).width;
+    if (textWidth > maxWidth) {
+      maxWidth = textWidth;
+    }
+  });
+
+  // Include some padding between the spaceship and the text
+  const padding = 30;
+
+  // Using sortedPlayers array for ordering
+  (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
+    const playerLabel = `${player.username}: ${player.score}`;
+
+    ctx.fillStyle = `rgba(10, 10, 10, 1)`;
+    ctx.fillText(playerLabel, canvas.width - 10, 20 + index * 20);
+
+    // Render a small spaceship to the left of the player name, shift by maxWidth
+    ssRender.render(
+      canvas.width - maxWidth - padding - 10, // shifted x-position
+      12 + index * 20, // same y-position as the text
+      0, // static vx
+      0, // static vy
+      player.direction, // same orientation
+      id === room.sessionId ? "blue" : "green", // same color
+      player.accel, // no acceleration
+      ctx,
+      "", false, false
+    );
   });
 }
 
@@ -91,20 +126,13 @@ function getSortedPlayers() {
   return playersArray.sort((a, b) => b[1].score - a[1].score);
 }
 
-document.getElementById("connect").addEventListener("click", async () => {
-  const username = (document.getElementById("username") as HTMLInputElement).value;
 
 
-  if (!username.trim()) {
-    alert("Please enter a username.");
-    return;
-  }
+// Make this a let so it can be set when the username is entered.
+let username: string | null = null;
 
-  document.getElementById("game-init").style.display = "none";
-  document.getElementById("game-connect").style.display = "block";
-
-  room = await client.joinOrCreate("game", { username });
-
+(async function connectToServer() {
+  room = await client.joinOrCreate("game");
   room.onStateChange.once(() => {
     // Initial state received from the server
     // keeping track of the timestep and resetting the counter to check
@@ -114,7 +142,7 @@ document.getElementById("connect").addEventListener("click", async () => {
   });
 
   room.onMessage('init', (message) => {
-    // retrive initialization metrics
+    // retrieve initialization metrics
     gameMetrics = message;
 
     // Resize canvas to match game area dimensions
@@ -131,22 +159,86 @@ document.getElementById("connect").addEventListener("click", async () => {
   });
 
   document.addEventListener("keydown", (event) => {
-    const key = event.key;
-    if (["w", "a", "s", "d"].includes(key)) {
-      room.send("input", key + "-down");
-    } else if (key === " ") {
-      room.send("input", "fire-down");
+    if (username) {
+      switch (event.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          room.send("input", "w-down");
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          room.send("input", "s-down");
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          room.send("input", "a-down");
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          room.send("input", "d-down");
+          break;
+        case ' ':
+          room.send("input", "fire-down");
+          break;
+        case 'l':
+        case 'L':
+          showPlayerLabels = !showPlayerLabels;
+      }
     }
   });
 
   document.addEventListener("keyup", (event) => {
-    const key = event.key;
-    if (["w", "a", "s", "d"].includes(key)) {
-      room.send("input", key + "-up");
-    } else if (event.key === " ") {
-      room.send("input", "fire-up");
+    if (username) {
+      switch (event.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          room.send("input", "w-up");
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          room.send("input", "s-up");
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          room.send("input", "a-up");
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          room.send("input", "d-up");
+          break;
+        case ' ':
+          room.send("input", "fire-up");
+          break;
+      }
     }
   });
 
   render();
+})();
+
+document.getElementById("connect").addEventListener("click", async () => {
+  username = (document.getElementById("username") as HTMLInputElement).value;
+
+  if (!username.trim()) {
+    alert("Please enter a username.");
+    return;
+  }
+
+  document.getElementById("game-init").style.display = "none";
+  document.getElementById("game-connect").style.zIndex = "1";
+  document.getElementById("game-connect").style.display = "block";
+
+  // Now that we have the username, send it to the server.
+  room.send("joinGame", username);
 });
+
+
+

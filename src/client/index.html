@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,25 +12,84 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            position: relative;
+            /* Added this to make body a positioning reference */
+            height: 100vh;
+            /* Make sure the body fills the entire viewport */
+            margin: 0;
+            /* Remove default margins */
+            padding: 0;
+            /* Remove default padding */
         }
+
+        #game-init {
+            position: absolute;
+            /* Position on top of the canvas */
+            top: 150px;
+            /* Center vertically */
+            left: 50%;
+            /* Center horizontally */
+            transform: translate(-50%, -50%);
+            /* Necessary for true centering */
+            background-color: rgba(255, 7, 7, 0.8);
+            /* Semi-transparent background */
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+            /* Added this to stack game-init on top of game-connect */
+            border-style: solid;
+            border-width: 3px;
+        }
+
         #game-connect {
-            display: none;
+            position: absolute;
+            /* Make canvas fill the entire body */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            /* Added this to stack game-connect below game-init */
         }
+
+
         canvas {
             background-color: white;
             display: block;
             margin: 0 auto;
         }
+
+        #game-init input,
+        #game-init button {
+            margin-top: 10px;
+        }
+
+        #connect {
+            margin-top: 10px;
+        }
     </style>
-</head>
+
 <body>
     <div id="game-init">
+        <center>
+        <h2>Space Ship Death Match</h2>
+        <p>You know what to do, just hit fire!<br>
+        Control with WSAD and fire with Space<br>
+        Hit L to see who is who<br>
+        Enter a name and join in!</p>
+    </center>
         <input type="text" id="username" placeholder="Enter Username">
-        <button id="connect">Connect</button>
+        <button id="connect">Join!</button>
     </div>
     <div id="game-connect">
         <canvas id="game" width="800" height="600"></canvas>
     </div>
+    <div id="game-instructions">
+        <p>WASD or Arrow keys to move<br>Space to fire<br>L to toggle labels</p>
+    </div>
 </body>
-</html>
 
+</html>
