@@ -47,10 +47,21 @@
         #game-connect {
             position: absolute;
             /* Make canvas fill the entire body */
+            top: 10px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            z-index: 0;
+            /* Added this to stack game-connect below game-init */
+        }
+
+        #game-instructions {
+            position: absolute;
+            /* Make canvas fill the entire body */
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: 200px;
             z-index: 0;
             /* Added this to stack game-connect below game-init */
         }
@@ -75,20 +86,20 @@
 <body>
     <div id="game-init">
         <center>
-        <h2>Space Ship Death Match</h2>
-        <p>You know what to do, just hit fire!<br>
-        Control with WSAD and fire with Space<br>
-        Hit L to see who is who<br>
-        Enter a name and join in!</p>
-    </center>
-        <input type="text" id="username" placeholder="Enter Username">
+            <h2>Space Ship Death Match</h2>
+            <p>You know what to do, just hit fire!<br>
+                Enter a name and join in!</p>
+        </center>
+        <input type="text" id="PlayerName" placeholder="Enter Username">
         <button id="connect">Join!</button>
     </div>
     <div id="game-connect">
         <canvas id="game" width="800" height="600"></canvas>
     </div>
     <div id="game-instructions">
-        <p>WASD or Arrow keys to move<br>Space to fire<br>L to toggle labels</p>
+        <center>
+            <p style="color: #8d81f7;"">WASD or Arrow keys to move<br>Space to fire<br>L to toggle labels</p>
+        </center>
     </div>
 </body>
 

@@ -148,6 +148,17 @@ let username: string | null = null;
     // Resize canvas to match game area dimensions
     canvas.width = gameMetrics.playAreaWidth;
     canvas.height = gameMetrics.playAreaHeight;
+
+    let gameDiv = document.getElementById("game-connect") as HTMLDivElement;
+    let instructionsDiv = document.getElementById("game-instructions") as HTMLDivElement;
+    
+    if (gameDiv) {
+      gameDiv.style.height = (gameMetrics.playAreaHeight + 10) + "px";
+    }
+    
+    if (instructionsDiv) {
+      instructionsDiv.style.top = (gameMetrics.playAreaHeight + 10) + "px";
+    }
   });
 
   room.onStateChange(() => {
@@ -225,7 +236,7 @@ let username: string | null = null;
 })();
 
 document.getElementById("connect").addEventListener("click", async () => {
-  username = (document.getElementById("username") as HTMLInputElement).value;
+  username = (document.getElementById("PlayerName") as HTMLInputElement).value;
 
   if (!username.trim()) {
     alert("Please enter a username.");
