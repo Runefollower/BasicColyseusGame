@@ -54,3 +54,12 @@ export class PlayerShip extends GameObject {
   draw(ctx: CanvasRenderingContext2D): void {
   }
 }
+
+
+
+
+export class Laser extends GameObject {
+
+  draw(ctx: CanvasRenderingContext2D): void {
+  }
+}

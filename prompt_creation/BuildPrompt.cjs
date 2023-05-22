@@ -4,6 +4,8 @@ const prefixPath = "src/";
 
 // Static array of file paths and descriptions
 const clientFiles = [
+  { path: 'client/ClientGameEngine.ts', description: 'This contains any client game logic and rendering' },
+  { path: 'client/GameEntities.ts', description: 'These are game objects to keep track of' },
   { path: 'client/SimpleGame.ts', description: 'This is the main client side code' },
   { path: 'client/SpaceShipRenderer.ts', description: 'This is the code to render the spaceship and laser' },
   { path: 'client/index.html', description: 'This is the client html code' },

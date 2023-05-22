@@ -1,4 +1,4 @@
-import { SpaceShipRender } from "./SpaceShipRenderer";
+
 import { SSGameEngineClient } from "./ClientGameEngine";
 import * as Colyseus from 'colyseus.js';
 
@@ -15,9 +15,6 @@ let lastFrameRender = 0.0;
 //last server update
 let framesBetweenState = 0;
 let maxFramesBetweenState = 0;
-
-let showPlayerLabels = false;
-let ssRender = new SpaceShipRender();
 
 const gamePrefix = "/BasicGameServer/";
 //const gamePrefix="";
@@ -40,21 +37,8 @@ function render() {
   lastFrameRender = thisFrameRender;
 
   gameEngine.update(udt, dt);
-  ssRender.update(dt);
 
-  gameEngine.draw(ctx);
-
-  room.state.lasers.forEach((laser) => {
-    ssRender.renderLaser(
-      laser.x + laser.vx * udt,
-      laser.y + laser.vy * udt,
-      laser.direction,
-      ctx
-    );
-  });
-
-  // Rendering game scores.
-  renderScores();
+  gameEngine.draw(ctx, udt, room.state);
 
   //Keep track of how many frames have been rendered
   //without a server update, and keep track of the
@@ -65,52 +49,6 @@ function render() {
   framesBetweenState++;
 
   requestAnimationFrame(() => render());
-}
-
-// This function will render the scores.
-function renderScores() {
-  const sortedPlayers = getSortedPlayers();
-  ctx.fillStyle = 'black';
-  ctx.font = '16px Arial';
-  ctx.textAlign = 'right';
-
-  let maxWidth = 0;
-  (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
-    const playerLabel = `${player.username}: ${player.score}`;
-    const textWidth = ctx.measureText(playerLabel).width;
-    if (textWidth > maxWidth) {
-      maxWidth = textWidth;
-    }
-  });
-
-  // Include some padding between the spaceship and the text
-  const padding = 30;
-
-  // Using sortedPlayers array for ordering
-  (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
-    const playerLabel = `${player.username}: ${player.score}`;
-
-    ctx.fillStyle = `rgba(10, 10, 10, 1)`;
-    ctx.fillText(playerLabel, canvas.width - 10, 20 + index * 20);
-
-    // Render a small spaceship to the left of the player name, shift by maxWidth
-    ssRender.render(
-      canvas.width - maxWidth - padding - 10, // shifted x-position
-      12 + index * 20, // same y-position as the text
-      0, // static vx
-      0, // static vy
-      player.direction, // same orientation
-      id === room.sessionId ? "blue" : "green", // same color
-      player.accel, // no acceleration
-      ctx,
-      "", false, false
-    );
-  });
-}
-
-function getSortedPlayers() {
-  const playersArray = Array.from(room.state.players.entries());
-  return playersArray.sort((a, b) => b[1].score - a[1].score);
 }
 
 
@@ -137,6 +75,8 @@ let username: string | null = null;
     // Resize canvas to match game area dimensions
     canvas.width = gameMetrics.playAreaWidth;
     canvas.height = gameMetrics.playAreaHeight;
+    gameEngine.displayWidth = canvas.width;
+    gameEngine.displayHeight = canvas.height;
 
     let gameDiv = document.getElementById("game-connect") as HTMLDivElement;
     let instructionsDiv = document.getElementById("game-instructions") as HTMLDivElement;
@@ -188,7 +128,7 @@ let username: string | null = null;
           break;
         case 'l':
         case 'L':
-          showPlayerLabels = !showPlayerLabels;
+          gameEngine.showPlayerLabels = !gameEngine.showPlayerLabels;
       }
     }
   });

@@ -2,10 +2,21 @@ import { PlayerShip } from "./GameEntities";
 import { SpaceShipRender } from "./SpaceShipRenderer";
 
 export class SSGameEngineClient {
+    //Map of active ships
     playerShips: Map<string, PlayerShip> = new Map();;
+
+    //This current player session id
     playerSessionID: string = "";
+
+    //The ship renderer
     ssRenderer: SpaceShipRender;
+
+    //Flag to indicate if the labels for players should be shown
     showPlayerLabels = false;
+
+    //The dimension of the displayed region
+    displayWidth = 100;
+    displayHeight = 100;
 
     constructor() {
         this.ssRenderer = new SpaceShipRender();
@@ -22,7 +33,7 @@ export class SSGameEngineClient {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, udt: number, roomState: any) {
         for (let playerShip of this.playerShips.values()) {
             const color = playerShip.sessionId === this.playerSessionID ? "blue" : "green";
             this.ssRenderer.render(
@@ -41,6 +52,68 @@ export class SSGameEngineClient {
                 true
             );
         }
+
+        roomState.lasers.forEach((laser) => {
+            this.ssRenderer.renderLaser(
+                laser.x + laser.vx * udt,
+                laser.y + laser.vy * udt,
+                laser.direction,
+                ctx
+            );
+        });
+
+
+
+        // Rendering game scores.
+        this.renderScores(ctx, roomState);
+    }
+
+
+
+    // This function will render the scores.
+    renderScores(ctx: CanvasRenderingContext2D, roomState: any) {
+        const sortedPlayers = this.getSortedPlayers(roomState);
+        ctx.fillStyle = 'black';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'right';
+
+        let maxWidth = 0;
+        (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
+            const playerLabel = `${player.username}: ${player.score}`;
+            const textWidth = ctx.measureText(playerLabel).width;
+            if (textWidth > maxWidth) {
+                maxWidth = textWidth;
+            }
+        });
+
+        // Include some padding between the spaceship and the text
+        const padding = 30;
+
+        // Using sortedPlayers array for ordering
+        (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
+            const playerLabel = `${player.username}: ${player.score}`;
+
+            ctx.fillStyle = `rgba(10, 10, 10, 1)`;
+            ctx.fillText(playerLabel, this.displayWidth - 10, 20 + index * 20);
+
+            // Render a small spaceship to the left of the player name, shift by maxWidth
+            this.ssRenderer.render(
+                this.displayWidth - maxWidth - padding - 10, // shifted x-position
+                12 + index * 20, // same y-position as the text
+                0, // static vx
+                0, // static vy
+                player.direction, // same orientation
+                id === this.playerSessionID ? "blue" : "green", // same color
+                player.accel, // no acceleration
+                ctx,
+                "", false, false
+            );
+        });
+    }
+
+    getSortedPlayers(roomState: any) {
+        const playersArray = Array.from(roomState.players.entries());
+        return playersArray.sort((a, b) => b[1].score - a[1].score);
     }
 
 
