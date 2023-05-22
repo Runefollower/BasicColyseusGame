@@ -1,4 +1,5 @@
 import { SpaceShipRender } from "./SpaceShipRenderer";
+import { SSGameEngineClient } from "./ClientGameEngine";
 import * as Colyseus from 'colyseus.js';
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -25,6 +26,8 @@ const client = new Colyseus.Client(`${protocol}://${window.location.hostname}:${
 let room: Colyseus.Room;
 let gameMetrics: any;
 
+let gameEngine: SSGameEngineClient = new SSGameEngineClient();
+
 
 
 
@@ -36,26 +39,10 @@ function render() {
   let dt = thisFrameRender - lastFrameRender;
   lastFrameRender = thisFrameRender;
 
+  gameEngine.update(udt, dt);
   ssRender.update(dt);
 
-  //Rendering...  loop through clients and render to screen
-  //updating the position for latency from last update
-  room.state.players.forEach((player, sessionId) => {
-    const color = sessionId === room.sessionId ? "blue" : "green";
-    ssRender.render(
-      player.x + player.vx * udt,
-      player.y + player.vy * udt,
-      player.vx,
-      player.vy,
-      player.direction,
-      color,
-      player.accel,
-      ctx,
-      player.username,
-      showPlayerLabels,
-      true
-    );
-  });
+  gameEngine.draw(ctx);
 
   room.state.lasers.forEach((laser) => {
     ssRender.renderLaser(
@@ -133,6 +120,8 @@ let username: string | null = null;
 
 (async function connectToServer() {
   room = await client.joinOrCreate("game");
+  gameEngine.setSessionID(room.sessionId);
+
   room.onStateChange.once(() => {
     // Initial state received from the server
     // keeping track of the timestep and resetting the counter to check
@@ -167,6 +156,8 @@ let username: string | null = null;
     // frames without update
     lastStateUpdate = performance.now();
     framesBetweenState = 0;
+
+    gameEngine.updateFromServer(room.state);
   });
 
   document.addEventListener("keydown", (event) => {
