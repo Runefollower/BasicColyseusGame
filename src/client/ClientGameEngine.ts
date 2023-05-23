@@ -14,6 +14,9 @@ export class SSGameEngineClient {
     //Flag to indicate if the labels for players should be shown
     showPlayerLabels = false;
 
+    //Flag to indicate if the labels for players should be shown
+    showServerMetrics = false;
+
     //The dimension of the displayed region
     displayWidth = 100;
     displayHeight = 100;
@@ -66,6 +69,10 @@ export class SSGameEngineClient {
 
         // Rendering game scores.
         this.renderScores(ctx, roomState);
+
+        if (this.showServerMetrics) {
+            this.renderServerMetrics(ctx, roomState);
+        }
     }
 
 
@@ -109,6 +116,28 @@ export class SSGameEngineClient {
                 "", false, false
             );
         });
+    }
+
+    renderServerMetrics(ctx: CanvasRenderingContext2D, roomState: any) {
+        const fontSize = 14;
+        ctx.font = `${fontSize}px Courier`;
+        ctx.fillStyle = "blue";
+        ctx.textAlign = 'left';
+
+        const metrics = [
+            `Clients Count....: ${roomState.currentClientsCount}`,
+            `Max Clients......: ${roomState.maxClientsCountLastMinute}`,
+            `Updates per Sec..: ${roomState.gameUpdateCyclesPerSecond.toFixed(2)}`,
+            `High Score Player: ${roomState.highestScorePlayer}`,
+            `High Score.......: ${roomState.highestScore}`
+        ];
+
+        const xOffset = 20; // Adjust this as needed
+        const yOffset = 20; // Adjust this as needed
+
+        for (let i = 0; i < metrics.length; i++) {
+            ctx.fillText(metrics[i], xOffset, yOffset + (i * fontSize));
+        }
     }
 
     getSortedPlayers(roomState: any) {

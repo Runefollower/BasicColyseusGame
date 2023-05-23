@@ -80,11 +80,11 @@ let username: string | null = null;
 
     let gameDiv = document.getElementById("game-connect") as HTMLDivElement;
     let instructionsDiv = document.getElementById("game-instructions") as HTMLDivElement;
-    
+
     if (gameDiv) {
       gameDiv.style.height = (gameMetrics.playAreaHeight + 10) + "px";
     }
-    
+
     if (instructionsDiv) {
       instructionsDiv.style.top = (gameMetrics.playAreaHeight + 10) + "px";
     }
@@ -129,6 +129,11 @@ let username: string | null = null;
         case 'l':
         case 'L':
           gameEngine.showPlayerLabels = !gameEngine.showPlayerLabels;
+          break;
+        case 'k':
+        case 'K':
+          gameEngine.showServerMetrics = !gameEngine.showServerMetrics;
+          break;
       }
     }
   });

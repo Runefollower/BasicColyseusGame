@@ -88,17 +88,26 @@ export class Laser extends Schema {
 
 
 export class GameState extends Schema {
-  @type({ map: Player }) 
+  @type({ map: Player })
   players = new MapSchema<Player>();
 
   @type([Laser])
   lasers = new ArraySchema<Laser>();
 
   // Server-side metrics
+  @type("number")
   gameUpdateCyclesPerSecond: number;
+
+  @type("number")
   currentClientsCount: number;
+
+  @type("number")
   maxClientsCountLastMinute: number;
+
+  @type("string")
   highestScorePlayer: string;
+
+  @type("number")
   highestScore: number;
 
   constructor() {
