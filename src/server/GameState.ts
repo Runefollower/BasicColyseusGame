@@ -93,4 +93,22 @@ export class GameState extends Schema {
 
   @type([Laser])
   lasers = new ArraySchema<Laser>();
+
+  // Server-side metrics
+  gameUpdateCyclesPerSecond: number;
+  currentClientsCount: number;
+  maxClientsCountLastMinute: number;
+  highestScorePlayer: string;
+  highestScore: number;
+
+  constructor() {
+    super();
+
+    // Initialize server-side metrics
+    this.gameUpdateCyclesPerSecond = 0;
+    this.currentClientsCount = 0;
+    this.maxClientsCountLastMinute = 0;
+    this.highestScorePlayer = '';
+    this.highestScore = 0;
+  }
 }

@@ -14,12 +14,19 @@ let SimpleGameMetrics = {
   fireDelayInterval: 200,
 }
 
+// Controls for metrics updates
+let nextMinuteUpdate = 0;
+let nextLogMetricsUpdate = 0;
+
+
 
 export class SimpleGameLogic {
   state: GameState;
+  gameUpdateTimestamps: number[];
 
   constructor(state: GameState) {
     this.state = state;
+    this.gameUpdateTimestamps = []; 
   }
 
   getInitializationData() {
@@ -159,5 +166,42 @@ export class SimpleGameLogic {
         laser.y <= SimpleGameMetrics.playAreaHeight
       );
     });
+
+    this.updateMetrics(elapsedTime);
+  }
+
+  updateMetrics(elapsedTime: number) {
+    // Update client count
+    this.state.currentClientsCount = this.state.players.size;
+    this.state.maxClientsCountLastMinute = Math.max(this.state.currentClientsCount, this.state.maxClientsCountLastMinute);
+
+    // Update game cycles count
+    this.gameUpdateTimestamps.push(elapsedTime);
+    if (this.gameUpdateTimestamps.length > 50) {
+      const firstTimestamp = this.gameUpdateTimestamps.shift();
+      const secondsPassed = (elapsedTime - firstTimestamp!) / 1000;
+      this.state.gameUpdateCyclesPerSecond = 50 / secondsPassed;
+    }
+
+    // Update highest score
+    this.state.players.forEach((player, sessionId) => {
+      if (player.score > this.state.highestScore) {
+        this.state.highestScore = player.score;
+        this.state.highestScorePlayer = player.username;
+      }
+    });
+
+    // Reset max clients count every minute
+    if (elapsedTime > nextMinuteUpdate) {
+      this.state.maxClientsCountLastMinute = this.state.currentClientsCount;
+      nextMinuteUpdate = elapsedTime + 60000;
+    }
+
+    if ((elapsedTime > nextLogMetricsUpdate) && (this.state.players.size > 0)) {
+      nextLogMetricsUpdate = elapsedTime + 60000;
+
+      logWithTimestamp(`Clients Count: ${this.state.currentClientsCount}, Max Clients: ${this.state.maxClientsCountLastMinute}, UPS: ${this.state.gameUpdateCyclesPerSecond.toFixed(2)}, High Score: ${this.state.highestScorePlayer} ${this.state.highestScore}`);
+    }
+    
   }
 }
