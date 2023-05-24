@@ -141,6 +141,9 @@ export class SpaceShipRender {
     if (displayName) {
       ctx.save();
       ctx.translate(x, y);
+      const fontSize = 9;
+      ctx.font = "10px Courier";
+      ctx.textAlign = 'right';
       ctx.fillStyle = color;
       const labelMetrics = ctx.measureText(name);
 

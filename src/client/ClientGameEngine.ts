@@ -21,22 +21,72 @@ export class SSGameEngineClient {
     displayWidth = 100;
     displayHeight = 100;
 
+    /*
+     *Client side performance stats
+     */
+    //To keep track the time of the last server update
+    lastStateUpdate = 0.0;
+
+    //To keep track the time of the last frame render
+    lastFrameRender = 0.0;
+
+    //For counting the number of frame updates since the
+    //last server update
+    framesBetweenState = 0;
+    maxFramesBetweenState = 0;
+    nextResetMax = 0;
+
+    //Will become a queue of last X
+    //frame updates to calculate moving 
+    //average framerate
+    renderUpdateTimestamps: number[];
+    framesPerSecond: number = 0.0;
+
+    //Will become a queue of last X
+    //server updates to calculate moving 
+    //average server updates per second
+    serverUpdateTimestamps: number[];
+    updatesPerSecond: number = 0.0;
+
     constructor() {
         this.ssRenderer = new SpaceShipRender();
+        
+        //Initialize metrics to keep track of the framerate
+        //and rate of server updates
+        this.lastStateUpdate = performance.now();
+        this.framesBetweenState = 0;
+        this.renderUpdateTimestamps = [];
+        this.serverUpdateTimestamps = [];
     }
 
     //Update the game engine, passed the udt or update delta time
     //the time since last update from the sever
     //and dt, time since last render
-    update(udt: number, dt: number) {
+    update(udt: number, dt: number, elapsedTime: number) {
         this.ssRenderer.update(dt);
 
         for (let playerShip of this.playerShips.values()) {
             playerShip.update(udt);
         }
+
+        //Keep track of how many frames have been rendered
+        //without a server update, and keep track of the
+        //max max frames without update
+        this.framesBetweenState++;
+        if ((this.framesBetweenState > this.maxFramesBetweenState) || (elapsedTime > this.nextResetMax)) {
+            this.maxFramesBetweenState = this.framesBetweenState;
+            this.nextResetMax = elapsedTime + 60000;
+        }
     }
 
-    draw(ctx: CanvasRenderingContext2D, udt: number, roomState: any) {
+    draw(ctx: CanvasRenderingContext2D, udt: number, elapsedTime: number, roomState: any) {
+        this.renderUpdateTimestamps.push(elapsedTime);
+        if (this.renderUpdateTimestamps.length > 50) {
+            const firstTimestamp = this.renderUpdateTimestamps.shift();
+            const secondsPassed = (elapsedTime - firstTimestamp!) / 1000;
+            this.framesPerSecond = 50 / secondsPassed;
+        }
+
         for (let playerShip of this.playerShips.values()) {
             const color = playerShip.sessionId === this.playerSessionID ? "blue" : "green";
             this.ssRenderer.render(
@@ -81,7 +131,7 @@ export class SSGameEngineClient {
     renderScores(ctx: CanvasRenderingContext2D, roomState: any) {
         const sortedPlayers = this.getSortedPlayers(roomState);
         ctx.fillStyle = 'black';
-        ctx.font = '16px Arial';
+        ctx.font = '16px Courier';
         ctx.textAlign = 'right';
 
         let maxWidth = 0;
@@ -127,9 +177,12 @@ export class SSGameEngineClient {
         const metrics = [
             `Clients Count....: ${roomState.currentClientsCount}`,
             `Max Clients......: ${roomState.maxClientsCountLastMinute}`,
-            `Updates per Sec..: ${roomState.gameUpdateCyclesPerSecond.toFixed(2)}`,
             `High Score Player: ${roomState.highestScorePlayer}`,
-            `High Score.......: ${roomState.highestScore}`
+            `High Score.......: ${roomState.highestScore}`,
+            `Max fr per update: ${this.maxFramesBetweenState}`,
+            `Server LPS.......: ${roomState.gameUpdateCyclesPerSecond.toFixed(2)}`,
+            `Server UPS.......: ${this.updatesPerSecond.toFixed(2)}`,
+            `FPS..............: ${this.framesPerSecond.toFixed(2)}`
         ];
 
         const xOffset = 20; // Adjust this as needed
@@ -151,6 +204,18 @@ export class SSGameEngineClient {
     }
 
     async updateFromServer(roomState: any) {
+        // Update state received from the server
+        // keeping track of the timestep and resetting the counter to check
+        // frames without update
+        this.lastStateUpdate = performance.now();
+        this.framesBetweenState = 0;
+
+        this.serverUpdateTimestamps.push(this.lastStateUpdate);
+        if (this.serverUpdateTimestamps.length > 50) {
+            const firstTimestamp = this.serverUpdateTimestamps.shift();
+            const secondsPassed = (this.lastStateUpdate - firstTimestamp!) / 1000;
+            this.updatesPerSecond = 50 / secondsPassed;
+        }
 
         // Create a set of all session IDs in the new state
         //const newStateIDs = new Set(Object.keys(roomState.players));

@@ -5,17 +5,6 @@ import * as Colyseus from 'colyseus.js';
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
-//To keep track the time of the last server update
-let lastStateUpdate = 0.0;
-
-//To keep track the time of the last frame render
-let lastFrameRender = 0.0;
-
-//For counting the number of frame updates since the
-//last server update
-let framesBetweenState = 0;
-let maxFramesBetweenState = 0;
-
 const gamePrefix = "/BasicGameServer/";
 //const gamePrefix="";
 const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -24,6 +13,9 @@ let room: Colyseus.Room;
 let gameMetrics: any;
 
 let gameEngine: SSGameEngineClient = new SSGameEngineClient();
+
+let lastStateUpdate = performance.now();
+let lastFrameRender = performance.now();
 
 
 
@@ -36,17 +28,9 @@ function render() {
   let dt = thisFrameRender - lastFrameRender;
   lastFrameRender = thisFrameRender;
 
-  gameEngine.update(udt, dt);
+  gameEngine.update(udt, dt, thisFrameRender);
 
-  gameEngine.draw(ctx, udt, room.state);
-
-  //Keep track of how many frames have been rendered
-  //without a server update, and keep track of the
-  //max max frames without update
-  if (framesBetweenState > maxFramesBetweenState) {
-    maxFramesBetweenState = framesBetweenState;
-  }
-  framesBetweenState++;
+  gameEngine.draw(ctx, udt, thisFrameRender, room.state);
 
   requestAnimationFrame(() => render());
 }
@@ -61,11 +45,6 @@ let username: string | null = null;
   gameEngine.setSessionID(room.sessionId);
 
   room.onStateChange.once(() => {
-    // Initial state received from the server
-    // keeping track of the timestep and resetting the counter to check
-    // frames without update
-    lastStateUpdate = performance.now();
-    framesBetweenState = 0;
   });
 
   room.onMessage('init', (message) => {
@@ -91,11 +70,7 @@ let username: string | null = null;
   });
 
   room.onStateChange(() => {
-    // Update state received from the server
-    // keeping track of the timestep and resetting the counter to check
-    // frames without update
     lastStateUpdate = performance.now();
-    framesBetweenState = 0;
 
     gameEngine.updateFromServer(room.state);
   });
