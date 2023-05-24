@@ -151,7 +151,9 @@ export class SpaceShipRender {
       ctx.restore();
     }
 
-    this.particleEmitter.render(ctx);
+    if (displayExhaust) {
+      this.particleEmitter.render(ctx);
+    }
   }
 
   renderLaser(

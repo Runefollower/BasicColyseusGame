@@ -3,6 +3,7 @@ import { SSGameEngineClient } from "./ClientGameEngine";
 import * as Colyseus from 'colyseus.js';
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
+const gameDiv = document.getElementById("game-div") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
 const gamePrefix = "/BasicGameServer/";
@@ -21,7 +22,8 @@ let lastFrameRender = performance.now();
 
 
 function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgb(230 230 230)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   let thisFrameRender = performance.now();
   let udt = thisFrameRender - lastStateUpdate;
@@ -52,21 +54,12 @@ let username: string | null = null;
     gameMetrics = message;
 
     // Resize canvas to match game area dimensions
-    canvas.width = gameMetrics.playAreaWidth;
-    canvas.height = gameMetrics.playAreaHeight;
-    gameEngine.displayWidth = canvas.width;
-    gameEngine.displayHeight = canvas.height;
-
-    let gameDiv = document.getElementById("game-connect") as HTMLDivElement;
-    let instructionsDiv = document.getElementById("game-instructions") as HTMLDivElement;
-
-    if (gameDiv) {
-      gameDiv.style.height = (gameMetrics.playAreaHeight + 10) + "px";
-    }
-
-    if (instructionsDiv) {
-      instructionsDiv.style.top = (gameMetrics.playAreaHeight + 10) + "px";
-    }
+    canvas.width = gameDiv.clientWidth;
+    canvas.height = gameDiv.clientHeight;
+    gameEngine.gameAreaWidth  = gameMetrics.playAreaWidth;
+    gameEngine.gameAreaHeight = gameMetrics.playAreaHeight;
+    gameEngine.displayWidth   = canvas.width;
+    gameEngine.displayHeight  = canvas.height;
   });
 
   room.onStateChange(() => {
@@ -158,9 +151,9 @@ document.getElementById("connect").addEventListener("click", async () => {
     return;
   }
 
-  document.getElementById("game-init").style.display = "none";
-  document.getElementById("game-connect").style.zIndex = "1";
-  document.getElementById("game-connect").style.display = "block";
+  document.getElementById("game-login").style.display = "none";
+  document.getElementById("game-div").style.zIndex = "1";
+  document.getElementById("game-div").style.display = "block";
 
   // Now that we have the username, send it to the server.
   room.send("joinGame", username);

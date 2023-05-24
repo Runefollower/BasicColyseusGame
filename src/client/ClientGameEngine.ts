@@ -87,6 +87,18 @@ export class SSGameEngineClient {
     }
 
     draw(ctx: CanvasRenderingContext2D, udt: number, elapsedTime: number, roomState: any) {
+        ctx.save();
+
+        const thisPlayer = this.playerShips.get(this.playerSessionID);
+        if(thisPlayer) {
+            ctx.translate((this.displayWidth/2)-thisPlayer.rx, (this.displayHeight/2) - thisPlayer.ry);
+        } else {
+            ctx.translate((this.displayWidth-this.gameAreaWidth)/2, (this.displayHeight-this.gameAreaHeight)/2);
+        }
+
+        ctx.fillStyle = "rgb(255 255 255)";
+        ctx.fillRect(0, 0, this.gameAreaWidth, this.gameAreaHeight);
+
         this.renderUpdateTimestamps.push(elapsedTime);
         if (this.renderUpdateTimestamps.length > 50) {
             const firstTimestamp = this.renderUpdateTimestamps.shift();
@@ -122,7 +134,7 @@ export class SSGameEngineClient {
             );
         });
 
-
+        ctx.restore();
 
         // Rendering game scores.
         this.renderScores(ctx, roomState);

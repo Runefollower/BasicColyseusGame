@@ -4,8 +4,8 @@ import { logWithTimestamp } from "./ServerTools";
 
 
 let SimpleGameMetrics = {
-  playAreaWidth: 1200,
-  playAreaHeight: 800,
+  playAreaWidth: 3000,
+  playAreaHeight: 3000,
   acceleration: 0.01,
   angularAcceleration: 0.005,
   drag: -0.01,
