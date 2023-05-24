@@ -109,6 +109,10 @@ let username: string | null = null;
         case 'K':
           gameEngine.showServerMetrics = !gameEngine.showServerMetrics;
           break;
+        case 'i':
+        case 'I':
+          gameEngine.showInstructions = !gameEngine.showInstructions;
+          break;
       }
     }
   });
@@ -160,6 +164,7 @@ document.getElementById("connect").addEventListener("click", async () => {
 
   // Now that we have the username, send it to the server.
   room.send("joinGame", username);
+  gameEngine.showInstructions = true;
 });
 
 

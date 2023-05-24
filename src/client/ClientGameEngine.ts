@@ -17,9 +17,16 @@ export class SSGameEngineClient {
     //Flag to indicate if the labels for players should be shown
     showServerMetrics = false;
 
+    //Flag to indicate if the instructions should be shown
+    showInstructions = false;
+
     //The dimension of the displayed region
     displayWidth = 100;
     displayHeight = 100;
+
+    //The dimension of the displayed region
+    gameAreaWidth = 100;
+    gameAreaHeight = 100;
 
     /*
      *Client side performance stats
@@ -123,6 +130,10 @@ export class SSGameEngineClient {
         if (this.showServerMetrics) {
             this.renderServerMetrics(ctx, roomState);
         }
+
+        if (this.showInstructions) {
+            this.renderInstructions(ctx);
+        }
     }
 
 
@@ -190,6 +201,28 @@ export class SSGameEngineClient {
 
         for (let i = 0; i < metrics.length; i++) {
             ctx.fillText(metrics[i], xOffset, yOffset + (i * fontSize));
+        }
+    }
+
+    renderInstructions(ctx: CanvasRenderingContext2D) {
+        const fontSize = 14;
+        ctx.font = `${fontSize}px Courier`;
+        ctx.fillStyle = "blue";
+        ctx.textAlign = 'left';
+
+        const instructions = [
+            "WASD or Arrow keys to move",
+            "Space to fire",
+            "L to toggle labels",
+            "K to toggle metrics",
+            "I to toggle these instructions"
+        ];
+
+        const xOffset = 20; // Adjust this as needed
+        const yOffset = 200; // Adjust this as needed
+
+        for (let i = 0; i < instructions.length; i++) {
+            ctx.fillText(instructions[i], xOffset, yOffset + (i * fontSize));
         }
     }
 

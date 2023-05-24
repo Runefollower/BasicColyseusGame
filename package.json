@@ -5,6 +5,7 @@
     "main": "src/server/SimpleGameRoom.js",
     "scripts": {
         "build": "tsc & npm run build:client",
+        "build:server": "tsc",
         "build:client": "webpack",
         "start": "ts-node src/server/SimpleGameRoom.ts -d",
         "start:dev": "ts-node-dev --watch \"src/**/*\" --respawn --transpile-only src/server/SimpleGameRoom.ts -d ",
