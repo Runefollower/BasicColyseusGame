@@ -1,7 +1,7 @@
 import http from "http";
 import express from "express";
-import path from 'path';
-import serveIndex from 'serve-index';
+import path from "path";
+import serveIndex from "serve-index";
 
 import { Server, Room, Client } from "colyseus";
 import { GameState } from "./GameState";
@@ -9,18 +9,19 @@ import { SimpleGameLogic } from "./SimpleGameLogic";
 import { logWithTimestamp } from "./ServerTools";
 
 let staticRoot = "../web";
-if (process.argv.includes('-d')) {
+const devMode = process.argv.includes("-d") ? true : false;
+
+if (devMode) {
   logWithTimestamp("Running in dev mode");
   staticRoot = "../../dist/web";
 } else {
   logWithTimestamp("Running in prod mode");
 }
 
-
 const app = express();
 app.use(express.json());
-app.use('/', serveIndex(path.join(__dirname, staticRoot), { 'icons': true }))
-app.use('/', express.static(path.join(__dirname, staticRoot)));
+app.use("/", serveIndex(path.join(__dirname, staticRoot), { icons: true }));
+app.use("/", express.static(path.join(__dirname, staticRoot)));
 
 const gameServer = new Server({
   server: http.createServer(app),
@@ -42,7 +43,7 @@ export class SimpleGameRoom extends Room<GameState> {
   }
 
   async onCreate() {
-    logWithTimestamp("CreateGameRoom")
+    logWithTimestamp("CreateGameRoom");
     this.setState(new GameState());
     this.gameLogic = new SimpleGameLogic(this.state);
 
@@ -53,19 +54,23 @@ export class SimpleGameRoom extends Room<GameState> {
 
     // Register the "joinGame" message handler
     this.onMessage("joinGame", (client, input) => {
-      logWithTimestamp("ClientJoined ClientID:" + client.sessionId + " Username:" + input);
+      logWithTimestamp(
+        "ClientJoined ClientID:" + client.sessionId + " Username:" + input
+      );
       this.gameLogic.addPlayer(client, input);
     });
 
     // Set up the game loop
-    this.setSimulationInterval((deltaTime) => this.gameLogic.update(deltaTime, this.clock.elapsedTime));
+    this.setSimulationInterval((deltaTime) =>
+      this.gameLogic.update(deltaTime, this.clock.elapsedTime)
+    );
   }
 
   async onJoin(client) {
-    logWithTimestamp("ClientConnected ClientID:" + client.sessionId );
+    logWithTimestamp("ClientConnected ClientID:" + client.sessionId);
 
     // Send initialization data to the client
-    client.send('init', this.gameLogic.getInitializationData());
+    client.send("init", this.gameLogic.getInitializationData());
   }
 
   onLeave(client) {
@@ -80,3 +85,9 @@ export class SimpleGameRoom extends Room<GameState> {
 
 gameServer.define("game", SimpleGameRoom);
 gameServer.listen(3000);
+
+if (devMode) {
+  logWithTimestamp(
+    "The game is now running at http://localhost:3000/index.html"
+  );
+}
