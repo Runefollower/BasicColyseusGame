@@ -3,7 +3,7 @@ import { SpaceShipRender } from "./SpaceShipRenderer";
 
 export class SSGameEngineClient {
   // Map of active ships
-  playerShips = new Map<string, PlayerShip>(); ;
+  playerShips = new Map<string, PlayerShip>();
 
   // This current player session id
   playerSessionID: string = "";
@@ -21,14 +21,14 @@ export class SSGameEngineClient {
   displayWidth = 100;
   displayHeight = 100;
 
-  constructor () {
+  constructor() {
     this.ssRenderer = new SpaceShipRender();
   }
 
   // Update the game engine, passed the udt or update delta time
   // the time since last update from the sever
   // and dt, time since last render
-  update (udt: number, dt: number) {
+  update(udt: number, dt: number) {
     this.ssRenderer.update(dt);
 
     for (const playerShip of this.playerShips.values()) {
@@ -36,9 +36,10 @@ export class SSGameEngineClient {
     }
   }
 
-  draw (ctx: CanvasRenderingContext2D, udt: number, roomState: any) {
+  draw(ctx: CanvasRenderingContext2D, udt: number, roomState: any) {
     for (const playerShip of this.playerShips.values()) {
-      const color = playerShip.sessionId === this.playerSessionID ? "blue" : "green";
+      const color =
+        playerShip.sessionId === this.playerSessionID ? "blue" : "green";
       this.ssRenderer.render(
         // playerShip.x + playerShip.vx * udt,
         // playerShip.y + playerShip.vy * udt,
@@ -74,7 +75,7 @@ export class SSGameEngineClient {
   }
 
   // This function will render the scores.
-  renderScores (ctx: CanvasRenderingContext2D, roomState: any) {
+  renderScores(ctx: CanvasRenderingContext2D, roomState: any) {
     const sortedPlayers = this.getSortedPlayers(roomState);
     ctx.fillStyle = "black";
     ctx.font = "16px Arial";
@@ -109,43 +110,45 @@ export class SSGameEngineClient {
         id === this.playerSessionID ? "blue" : "green", // same color
         player.accel, // no acceleration
         ctx,
-        "", false, false
+        "",
+        false,
+        false
       );
     });
   }
 
-  renderServerMetrics (ctx: CanvasRenderingContext2D, roomState: any) {
+  renderServerMetrics(ctx: CanvasRenderingContext2D, roomState: any) {
     const fontSize = 14;
     ctx.font = `${fontSize}px Courier`;
     ctx.fillStyle = "blue";
     ctx.textAlign = "left";
 
     const metrics = [
-            `Clients Count....: ${roomState.currentClientsCount}`,
-            `Max Clients......: ${roomState.maxClientsCountLastMinute}`,
-            `Updates per Sec..: ${roomState.gameUpdateCyclesPerSecond.toFixed(2)}`,
-            `High Score Player: ${roomState.highestScorePlayer}`,
-            `High Score.......: ${roomState.highestScore}`
+      `Clients Count....: ${roomState.currentClientsCount}`,
+      `Max Clients......: ${roomState.maxClientsCountLastMinute}`,
+      `Updates per Sec..: ${roomState.gameUpdateCyclesPerSecond.toFixed(2)}`,
+      `High Score Player: ${roomState.highestScorePlayer}`,
+      `High Score.......: ${roomState.highestScore}`,
     ];
 
     const xOffset = 20; // Adjust this as needed
     const yOffset = 20; // Adjust this as needed
 
     for (let i = 0; i < metrics.length; i++) {
-      ctx.fillText(metrics[i], xOffset, yOffset + (i * fontSize));
+      ctx.fillText(metrics[i], xOffset, yOffset + i * fontSize);
     }
   }
 
-  getSortedPlayers (roomState: any) {
+  getSortedPlayers(roomState: any) {
     const playersArray = Array.from(roomState.players.entries());
     return playersArray.sort((a, b) => b[1].score - a[1].score);
   }
 
-  setSessionID (newSessionID: string) {
+  setSessionID(newSessionID: string) {
     this.playerSessionID = newSessionID;
   }
 
-  async updateFromServer (roomState: any) {
+  async updateFromServer(roomState: any) {
     // Create a set of all session IDs in the new state
     // const newStateIDs = new Set(Object.keys(roomState.players));
     const newStateIDs = new Set([...roomState.players.keys()]);
@@ -178,20 +181,23 @@ export class SSGameEngineClient {
     // Any IDs left over in newStateIDs are new players, so add them to the map
     for (const sessionID of newStateIDs) {
       const playerServerState = roomState.players[sessionID];
-      this.playerShips.set(sessionID, new PlayerShip(
-        playerServerState.x,
-        playerServerState.y,
-        playerServerState.vx,
-        playerServerState.vy,
-        playerServerState.direction,
-        playerServerState.vr,
-        playerServerState.accel,
-        playerServerState.name,
-        playerServerState.firing,
-        playerServerState.lastFired,
-        playerServerState.score,
-        sessionID
-      ));
+      this.playerShips.set(
+        sessionID,
+        new PlayerShip(
+          playerServerState.x,
+          playerServerState.y,
+          playerServerState.vx,
+          playerServerState.vy,
+          playerServerState.direction,
+          playerServerState.vr,
+          playerServerState.accel,
+          playerServerState.name,
+          playerServerState.firing,
+          playerServerState.lastFired,
+          playerServerState.score,
+          sessionID
+        )
+      );
     }
   }
 }
