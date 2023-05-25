@@ -118,7 +118,7 @@ export class SSGameEngineClient {
         }
 
         for (let playerShip of this.playerShips.values()) {
-            const color = playerShip.sessionId === this.playerSessionID ? "blue" : "green";
+            const color = playerShip.sessionId === this.playerSessionID ? "blue" : "red";
             this.ssRenderer.render(
                 //playerShip.x + playerShip.vx * udt,
                 //playerShip.y + playerShip.vy * udt,
@@ -239,7 +239,7 @@ export class SSGameEngineClient {
                 0, // static vx
                 0, // static vy
                 player.direction, // same orientation
-                id === this.playerSessionID ? "blue" : "green", // same color
+                id === this.playerSessionID ? "blue" : "red", // same color
                 player.accel, // no acceleration
                 ctx,
                 "", false, false
