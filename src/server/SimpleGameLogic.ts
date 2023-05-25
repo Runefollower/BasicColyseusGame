@@ -59,12 +59,12 @@ export class SimpleGameLogic {
         // For cells not on the boundary
         if (x > 0 && x < gridSize - 1 && y > 0 && y < gridSize - 1) {
           // Randomly decide if there should be a wall on the right
-          if (Math.random() < 0.2) {
+          if (Math.random() < 0.15) {
             grid[y][x] |= R;
             grid[y][x + 1] |= L;
           }
           // Randomly decide if there should be a wall on the bottom
-          if (Math.random() < 0.2) {
+          if (Math.random() < 0.15) {
             grid[y][x] |= B;
             grid[y + 1][x] |= T;
           }
@@ -176,7 +176,7 @@ export class SimpleGameLogic {
   }
 
   addPlayer(client: Client, username: string) {
-    this.state.players.set(client.sessionId, new Player(username, Math.random() * 800, Math.random() * 600));
+    this.state.players.set(client.sessionId, new Player(username, Math.random() * SimpleGameMetrics.playAreaWidth, Math.random() * SimpleGameMetrics.playAreaHeight));
   }
 
   removePlayer(client: Client) {

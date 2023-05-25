@@ -61,7 +61,7 @@ let username: string | null = null;
     gameEngine.gridSize  = gameMetrics.gridSize;
     gameEngine.cellSize  = gameMetrics.cellSize;
     gameEngine.gameGrid  = gameMetrics.grid;
-    
+
     gameEngine.displayWidth   = canvas.width;
     gameEngine.displayHeight  = canvas.height;
   });
@@ -142,6 +142,16 @@ let username: string | null = null;
           break;
       }
     }
+  });
+
+  window.addEventListener('resize', () => {
+    // Resize canvas to match game area dimensions
+    canvas.width = gameDiv.clientWidth;
+    canvas.height = gameDiv.clientHeight;
+    
+    // Update game engine display dimensions
+    gameEngine.displayWidth   = canvas.width;
+    gameEngine.displayHeight  = canvas.height;
   });
 
   render();
