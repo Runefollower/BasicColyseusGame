@@ -8,9 +8,11 @@
     ],
     "parserOptions": {
         "ecmaVersion": "latest",
-        "project": "./tsconfig.json",
+        "project": ["./tsconfig.json", "./tsconfig.eslint.json"],
         "sourceType": "module"
     },
     "rules": {
+        "@typescript-eslint/quotes": [2, "double", { "avoidEscape": true }],
+        "@typescript-eslint/semi": [2, "always"]
     }
 }

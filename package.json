@@ -11,7 +11,7 @@
         "start:prod": "node dist/server/SimpleGameRoom.js",
         "test": "echo \"Error: no test specified\" && exit 1",
         "copy": "copyfiles -u 1 \"src/**/*.html\" \"dist/\"",
-        "lint": "eslint --ext .js,.ts ."
+        "lint": "eslint --ext .js,.ts . --ignore-path .gitignore"
     },
     "author": "",
     "license": "ISC",
