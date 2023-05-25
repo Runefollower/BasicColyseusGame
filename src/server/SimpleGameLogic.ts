@@ -2,7 +2,7 @@ import { Client } from "colyseus";
 import { GameState, Player, Laser } from "./GameState";
 import { logWithTimestamp } from "./ServerTools";
 
-let gridSize = 100;
+let gridSize = 30;
 
 let SimpleGameMetrics = {
   gridSize: gridSize,
