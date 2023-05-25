@@ -2,41 +2,41 @@ import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 
 export class Player extends Schema {
   @type("string")
-  username: string;
+    username: string;
 
   @type("number")
-  x: number;
+    x: number;
 
   @type("number")
-  y: number;
+    y: number;
 
   @type("number")
-  vx: number;
+    vx: number;
 
   @type("number")
-  vy: number;
+    vy: number;
 
   @type("number")
-  direction: number;
+    direction: number;
 
   @type("number")
-  vr: number;
+    vr: number;
 
   @type("number")
-  accel: number;
+    accel: number;
 
   @type("boolean")
-  firing: boolean;
+    firing: boolean;
 
   @type("number")
-  lastFired: number;
+    lastFired: number;
 
   @type("number")
-  score: number;
+    score: number;
 
   fireInterval: any;
 
-  constructor(username: string, x: number, y: number) {
+  constructor (username: string, x: number, y: number) {
     super();
     this.username = username;
     this.x = x;
@@ -54,27 +54,27 @@ export class Player extends Schema {
 
 export class Laser extends Schema {
   @type("number")
-  x: number;
+    x: number;
 
   @type("number")
-  y: number;
+    y: number;
 
   @type("number")
-  vx: number;
+    vx: number;
 
   @type("number")
-  vy: number;
+    vy: number;
 
   @type("number")
-  direction: number;
+    direction: number;
 
   @type("number")
-  remainingTime: number;
+    remainingTime: number;
 
   @type("string")
-  ownerSessionId: string;
+    ownerSessionId: string;
 
-  constructor(x: number, y: number, vx: number, vy: number, direction: number, ownerSessionId: string) {
+  constructor (x: number, y: number, vx: number, vy: number, direction: number, ownerSessionId: string) {
     super();
     this.x = x;
     this.y = y;
@@ -86,38 +86,37 @@ export class Laser extends Schema {
   }
 }
 
-
 export class GameState extends Schema {
   @type({ map: Player })
-  players = new MapSchema<Player>();
+    players = new MapSchema<Player>();
 
   @type([Laser])
-  lasers = new ArraySchema<Laser>();
+    lasers = new ArraySchema<Laser>();
 
   // Server-side metrics
   @type("number")
-  gameUpdateCyclesPerSecond: number;
+    gameUpdateCyclesPerSecond: number;
 
   @type("number")
-  currentClientsCount: number;
+    currentClientsCount: number;
 
   @type("number")
-  maxClientsCountLastMinute: number;
+    maxClientsCountLastMinute: number;
 
   @type("string")
-  highestScorePlayer: string;
+    highestScorePlayer: string;
 
   @type("number")
-  highestScore: number;
+    highestScore: number;
 
-  constructor() {
+  constructor () {
     super();
 
     // Initialize server-side metrics
     this.gameUpdateCyclesPerSecond = 0;
     this.currentClientsCount = 0;
     this.maxClientsCountLastMinute = 0;
-    this.highestScorePlayer = '';
+    this.highestScorePlayer = "";
     this.highestScore = 0;
   }
 }

@@ -1,25 +1,24 @@
-import { Client } from "colyseus";
-import { GameState, Player, Laser } from "./GameState";
+import { type Client } from "colyseus";
+import { type GameState, Player, Laser } from "./GameState";
 import { logWithTimestamp } from "./ServerTools";
 
-let gridSize = 30;
+const gridSize = 30;
 
-let SimpleGameMetrics = {
-  gridSize: gridSize,
+const SimpleGameMetrics = {
+  gridSize,
   playAreaWidth: gridSize * 100,
   playAreaHeight: gridSize * 100,
   cellSize: 100,
   acceleration: 0.01,
   angularAcceleration: 0.005,
   drag: -0.01,
-  laserSpeed: .4,
+  laserSpeed: 0.4,
   playerRadius: 10,
   fireDelayInterval: 200,
 
   // Initialize the grid as an empty grid (no walls)
   grid: Array(gridSize).fill(undefined).map(() => Array(gridSize).fill(0b0000)) // binary for no walls
-}
-
+};
 
 // Now you can use bitwise OR to set wall values
 // Define some constants for readability
@@ -28,20 +27,15 @@ const R = 0b0010;
 const B = 0b0100;
 const L = 0b1000;
 
-
-
-
 // Controls for metrics updates
 let nextMinuteUpdate = 0;
 let nextLogMetricsUpdate = 0;
-
-
 
 export class SimpleGameLogic {
   state: GameState;
   gameUpdateTimestamps: number[];
 
-  constructor(state: GameState) {
+  constructor (state: GameState) {
     this.state = state;
     this.gameUpdateTimestamps = [];
 
@@ -49,9 +43,9 @@ export class SimpleGameLogic {
     this.removeLockedWalls();
   }
 
-  populateGrid() {
+  populateGrid () {
     // Initialize the grid as an empty grid (no walls)
-    let grid: number[][] = Array(gridSize).fill(undefined).map(() => Array(gridSize).fill(0b0000)); // binary for no walls
+    const grid: number[][] = Array(gridSize).fill(undefined).map(() => Array(gridSize).fill(0b0000)); // binary for no walls
 
     // Randomly generate walls
     for (let y = 0; y < gridSize; y++) {
@@ -89,20 +83,20 @@ export class SimpleGameLogic {
     SimpleGameMetrics.grid = grid;
   }
 
-  removeLockedWalls() {
+  removeLockedWalls () {
     // Create a grid to track visited cells
-    let visited = Array(gridSize).fill(false).map(() => Array(gridSize).fill(false));
-  
+    const visited = Array(gridSize).fill(false).map(() => Array(gridSize).fill(false));
+
     // Recursive function to perform the depth-first search
-    function dfs(x: number, y: number) {
+    function dfs (x: number, y: number) {
       // Return if the cell is out of bounds or already visited
       if (x < 0 || y < 0 || x >= gridSize || y >= gridSize || visited[y][x]) {
         return;
       }
-  
+
       // Mark the cell as visited
       visited[y][x] = true;
-  
+
       // Visit all adjacent cells
       if ((SimpleGameMetrics.grid[y][x] & T) == 0) {
         dfs(x, y - 1);
@@ -117,10 +111,10 @@ export class SimpleGameLogic {
         dfs(x - 1, y);
       }
     }
-  
+
     // Start the search from the top-left cell (or any cell on the boundary)
     dfs(0, 0);
-  
+
     // Check for cells that weren't visited and remove a wall to make them reachable
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
@@ -136,13 +130,13 @@ export class SimpleGameLogic {
     }
   }
 
-  getInitializationData() {
+  getInitializationData () {
     return SimpleGameMetrics;
   }
 
-  handleInput(client: Client, input: string) {
+  handleInput (client: Client, input: string) {
     if (this.state.players.has(client.sessionId)) {
-      let player = this.state.players.get(client.sessionId);
+      const player = this.state.players.get(client.sessionId);
 
       switch (input) {
         case "w-down":
@@ -175,15 +169,15 @@ export class SimpleGameLogic {
     }
   }
 
-  addPlayer(client: Client, username: string) {
+  addPlayer (client: Client, username: string) {
     this.state.players.set(client.sessionId, new Player(username, Math.random() * SimpleGameMetrics.playAreaWidth, Math.random() * SimpleGameMetrics.playAreaHeight));
   }
 
-  removePlayer(client: Client) {
+  removePlayer (client: Client) {
     this.state.players.delete(client.sessionId);
   }
 
-  update(deltaTime: number, elapsedTime: number) {
+  update (deltaTime: number, elapsedTime: number) {
     this.state.players.forEach((player, sessionId) => {
       // Compute proposed new position
       let newVx = player.vx + Math.cos(player.direction) * player.accel + SimpleGameMetrics.drag * player.vx;
@@ -192,27 +186,27 @@ export class SimpleGameLogic {
       let newY = player.y + newVy * deltaTime;
 
       // Check if proposed new position would collide with a wall
-      let gridX = Math.max(0, Math.min(SimpleGameMetrics.gridSize - 1, Math.floor(player.x / SimpleGameMetrics.cellSize)));
-      let gridY = Math.max(0, Math.min(SimpleGameMetrics.gridSize - 1, Math.floor(player.y / SimpleGameMetrics.cellSize)));
-      let gridCell = SimpleGameMetrics.grid[gridY][gridX];
+      const gridX = Math.max(0, Math.min(SimpleGameMetrics.gridSize - 1, Math.floor(player.x / SimpleGameMetrics.cellSize)));
+      const gridY = Math.max(0, Math.min(SimpleGameMetrics.gridSize - 1, Math.floor(player.y / SimpleGameMetrics.cellSize)));
+      const gridCell = SimpleGameMetrics.grid[gridY][gridX];
 
       if ((gridCell & R) && newX - (gridX * SimpleGameMetrics.cellSize) + SimpleGameMetrics.playerRadius > SimpleGameMetrics.cellSize) {
         // Collided with right wall
-        newVx = 0;  // Stop horizontal movement
+        newVx = 0; // Stop horizontal movement
         newX = gridX * SimpleGameMetrics.cellSize + SimpleGameMetrics.cellSize - SimpleGameMetrics.playerRadius; // Move to the left of the wall
       } else if ((gridCell & L) && newX - (gridX * SimpleGameMetrics.cellSize) - SimpleGameMetrics.playerRadius < 0) {
         // Collided with left wall
-        newVx = 0;  // Stop horizontal movement
+        newVx = 0; // Stop horizontal movement
         newX = gridX * SimpleGameMetrics.cellSize + SimpleGameMetrics.playerRadius; // Move to the right of the wall
       }
 
       if ((gridCell & B) && newY - (gridY * SimpleGameMetrics.cellSize) + SimpleGameMetrics.playerRadius > SimpleGameMetrics.cellSize) {
         // Collided with bottom wall
-        newVy = 0;  // Stop vertical movement
+        newVy = 0; // Stop vertical movement
         newY = gridY * SimpleGameMetrics.cellSize + SimpleGameMetrics.cellSize - SimpleGameMetrics.playerRadius; // Move above the wall
       } else if ((gridCell & T) && newY - (gridY * SimpleGameMetrics.cellSize) - SimpleGameMetrics.playerRadius < 0) {
         // Collided with top wall
-        newVy = 0;  // Stop vertical movement
+        newVy = 0; // Stop vertical movement
         newY = gridY * SimpleGameMetrics.cellSize + SimpleGameMetrics.playerRadius; // Move below the wall
       }
 
@@ -237,8 +231,6 @@ export class SimpleGameLogic {
       }
 
       player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
-
-
 
       if (player.firing && (elapsedTime - player.lastFired >= SimpleGameMetrics.fireDelayInterval)) {
         this.state.lasers.push(new Laser(
@@ -274,10 +266,9 @@ export class SimpleGameLogic {
           // Laser hit a ship, increment score, remove the ship and the laser
           const attacker = this.state.players.get(laser.ownerSessionId);
 
-          //check that you did not shoot yourself
+          // check that you did not shoot yourself
           if (attacker && (attacker !== player)) {
             attacker.score += 1;
-
 
             // Respawn the hit player in a random location
             player.x = Math.random() * SimpleGameMetrics.playAreaWidth;
@@ -309,7 +300,7 @@ export class SimpleGameLogic {
     this.updateMetrics(elapsedTime);
   }
 
-  updateMetrics(elapsedTime: number) {
+  updateMetrics (elapsedTime: number) {
     // Update client count
     this.state.currentClientsCount = this.state.players.size;
     this.state.maxClientsCountLastMinute = Math.max(this.state.currentClientsCount, this.state.maxClientsCountLastMinute);
@@ -318,7 +309,7 @@ export class SimpleGameLogic {
     this.gameUpdateTimestamps.push(elapsedTime);
     if (this.gameUpdateTimestamps.length > 50) {
       const firstTimestamp = this.gameUpdateTimestamps.shift();
-      const secondsPassed = (elapsedTime - firstTimestamp!) / 1000;
+      const secondsPassed = (elapsedTime - firstTimestamp) / 1000;
       this.state.gameUpdateCyclesPerSecond = 50 / secondsPassed;
     }
 
@@ -341,6 +332,5 @@ export class SimpleGameLogic {
 
       logWithTimestamp(`Clients Count: ${this.state.currentClientsCount}, Max Clients: ${this.state.maxClientsCountLastMinute}, UPS: ${this.state.gameUpdateCyclesPerSecond.toFixed(2)}, High Score: ${this.state.highestScorePlayer} ${this.state.highestScore}`);
     }
-
   }
 }
