@@ -17,7 +17,15 @@ abstract class GameObject {
   /**
    * Constructs a new GameObject.
    */
-  constructor (x: number, y: number, vx: number, vy: number, direction: number, vr: number, accel: number) {
+  constructor(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    direction: number,
+    vr: number,
+    accel: number
+  ) {
     this.x = x;
     this.y = y;
     this.vx = vx;
@@ -30,7 +38,7 @@ abstract class GameObject {
   /**
    * Updates the GameObject's position based on its velocity and the time since the last server update.
    */
-  update (udt: number): void {
+  update(udt: number): void {
     this.rx = this.x + this.vx * udt;
     this.ry = this.y + this.vy * udt;
   }
@@ -38,7 +46,7 @@ abstract class GameObject {
   /**
    * Abstract method for drawing the object. This needs to be implemented by any child classes.
    */
-  abstract draw (ctx: CanvasRenderingContext2D): void;
+  abstract draw(ctx: CanvasRenderingContext2D): void;
 }
 
 /**
@@ -55,7 +63,20 @@ export class PlayerShip extends GameObject {
   /**
    * Constructs a new PlayerShip.
    */
-  constructor (x: number, y: number, vx: number, vy: number, direction: number, vr: number, accel: number, name: string, firing: boolean, lastFired: number, score: number, sessionId: string) {
+  constructor(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    direction: number,
+    vr: number,
+    accel: number,
+    name: string,
+    firing: boolean,
+    lastFired: number,
+    score: number,
+    sessionId: string
+  ) {
     super(x, y, vx, vy, direction, vr, accel);
     this.name = name;
     this.firing = firing;
@@ -68,8 +89,7 @@ export class PlayerShip extends GameObject {
    * Implementation of the abstract draw method for PlayerShip.
    * This method would contain code to draw the player's ship on the canvas.
    */
-  draw (ctx: CanvasRenderingContext2D): void {
-  }
+  draw(ctx: CanvasRenderingContext2D): void {}
 }
 
 /**
@@ -81,6 +101,5 @@ export class Laser extends GameObject {
    * Implementation of the abstract draw method for Laser.
    * This method would contain code to draw a laser on the canvas.
    */
-  draw (ctx: CanvasRenderingContext2D): void {
-  }
+  draw(ctx: CanvasRenderingContext2D): void {}
 }

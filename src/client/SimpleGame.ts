@@ -1,4 +1,3 @@
-
 import { SSGameEngineClient } from "./ClientGameEngine";
 import * as Colyseus from "colyseus.js";
 
@@ -9,7 +8,9 @@ const ctx = canvas.getContext("2d");
 const gamePrefix = "/BasicGameServer/";
 // const gamePrefix="";
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-const client = new Colyseus.Client(`${protocol}://${window.location.hostname}:${window.location.port}${gamePrefix}`);
+const client = new Colyseus.Client(
+  `${protocol}://${window.location.hostname}:${window.location.port}${gamePrefix}`
+);
 let room: Colyseus.Room;
 let gameMetrics: any;
 
@@ -18,7 +19,7 @@ const gameEngine: SSGameEngineClient = new SSGameEngineClient();
 let lastStateUpdate = performance.now();
 let lastFrameRender = performance.now();
 
-function render () {
+function render() {
   ctx.fillStyle = "rgb(230 230 230)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -31,18 +32,19 @@ function render () {
 
   gameEngine.draw(ctx, udt, thisFrameRender, room.state);
 
-  requestAnimationFrame(() => { render(); });
+  requestAnimationFrame(() => {
+    render();
+  });
 }
 
 // Make this a let so it can be set when the username is entered.
 let username: string | null = null;
 
-(async function connectToServer () {
+(async function connectToServer() {
   room = await client.joinOrCreate("game");
   gameEngine.setSessionID(room.sessionId);
 
-  room.onStateChange.once(() => {
-  });
+  room.onStateChange.once(() => {});
 
   room.onMessage("init", (message) => {
     // retrieve initialization metrics

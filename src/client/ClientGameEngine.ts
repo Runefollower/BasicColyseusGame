@@ -3,7 +3,7 @@ import { SpaceShipRender } from "./SpaceShipRenderer";
 
 export class SSGameEngineClient {
   // Map of active ships
-  playerShips = new Map<string, PlayerShip>(); ;
+  playerShips = new Map<string, PlayerShip>();
 
   // This current player session id
   playerSessionID: string = "";
@@ -36,8 +36,8 @@ export class SSGameEngineClient {
   LEFT = 0b1000;
 
   /*
-     *Client side performance stats
-     */
+   *Client side performance stats
+   */
   // To keep track the time of the last server update
   lastStateUpdate = 0.0;
 
@@ -62,7 +62,7 @@ export class SSGameEngineClient {
   serverUpdateTimestamps: number[];
   updatesPerSecond: number = 0.0;
 
-  constructor () {
+  constructor() {
     this.ssRenderer = new SpaceShipRender();
 
     // Initialize metrics to keep track of the framerate
@@ -76,7 +76,7 @@ export class SSGameEngineClient {
   // Update the game engine, passed the udt or update delta time
   // the time since last update from the sever
   // and dt, time since last render
-  update (udt: number, dt: number, elapsedTime: number) {
+  update(udt: number, dt: number, elapsedTime: number) {
     this.ssRenderer.update(dt);
 
     for (const playerShip of this.playerShips.values()) {
@@ -87,20 +87,34 @@ export class SSGameEngineClient {
     // without a server update, and keep track of the
     // max max frames without update
     this.framesBetweenState++;
-    if ((this.framesBetweenState > this.maxFramesBetweenState) || (elapsedTime > this.nextResetMax)) {
+    if (
+      this.framesBetweenState > this.maxFramesBetweenState ||
+      elapsedTime > this.nextResetMax
+    ) {
       this.maxFramesBetweenState = this.framesBetweenState;
       this.nextResetMax = elapsedTime + 60000;
     }
   }
 
-  draw (ctx: CanvasRenderingContext2D, udt: number, elapsedTime: number, roomState: any) {
+  draw(
+    ctx: CanvasRenderingContext2D,
+    udt: number,
+    elapsedTime: number,
+    roomState: any
+  ) {
     ctx.save();
 
     const thisPlayer = this.playerShips.get(this.playerSessionID);
     if (thisPlayer) {
-      ctx.translate((this.displayWidth / 2) - thisPlayer.rx, (this.displayHeight / 2) - thisPlayer.ry);
+      ctx.translate(
+        this.displayWidth / 2 - thisPlayer.rx,
+        this.displayHeight / 2 - thisPlayer.ry
+      );
     } else {
-      ctx.translate((this.displayWidth - this.gameAreaWidth) / 2, (this.displayHeight - this.gameAreaHeight) / 2);
+      ctx.translate(
+        (this.displayWidth - this.gameAreaWidth) / 2,
+        (this.displayHeight - this.gameAreaHeight) / 2
+      );
     }
 
     ctx.fillStyle = "rgb(255 255 255)";
@@ -118,7 +132,8 @@ export class SSGameEngineClient {
     }
 
     for (const playerShip of this.playerShips.values()) {
-      const color = playerShip.sessionId === this.playerSessionID ? "blue" : "red";
+      const color =
+        playerShip.sessionId === this.playerSessionID ? "blue" : "red";
       this.ssRenderer.render(
         // playerShip.x + playerShip.vx * udt,
         // playerShip.y + playerShip.vy * udt,
@@ -159,7 +174,7 @@ export class SSGameEngineClient {
     }
   }
 
-  drawGrid (context: CanvasRenderingContext2D) {
+  drawGrid(context: CanvasRenderingContext2D) {
     context.strokeStyle = "black"; // color of the walls
     context.lineWidth = 4; // width of the walls
 
@@ -205,7 +220,7 @@ export class SSGameEngineClient {
   }
 
   // This function will render the scores.
-  renderScores (ctx: CanvasRenderingContext2D, roomState: any) {
+  renderScores(ctx: CanvasRenderingContext2D, roomState: any) {
     const sortedPlayers = this.getSortedPlayers(roomState);
     ctx.fillStyle = "black";
     ctx.font = "16px Courier";
@@ -240,37 +255,39 @@ export class SSGameEngineClient {
         id === this.playerSessionID ? "blue" : "red", // same color
         player.accel, // no acceleration
         ctx,
-        "", false, false
+        "",
+        false,
+        false
       );
     });
   }
 
-  renderServerMetrics (ctx: CanvasRenderingContext2D, roomState: any) {
+  renderServerMetrics(ctx: CanvasRenderingContext2D, roomState: any) {
     const fontSize = 14;
     ctx.font = `${fontSize}px Courier`;
     ctx.fillStyle = "blue";
     ctx.textAlign = "left";
 
     const metrics = [
-            `Clients Count....: ${roomState.currentClientsCount}`,
-            `Max Clients......: ${roomState.maxClientsCountLastMinute}`,
-            `High Score Player: ${roomState.highestScorePlayer}`,
-            `High Score.......: ${roomState.highestScore}`,
-            `Max fr per update: ${this.maxFramesBetweenState}`,
-            `Server LPS.......: ${roomState.gameUpdateCyclesPerSecond.toFixed(2)}`,
-            `Server UPS.......: ${this.updatesPerSecond.toFixed(2)}`,
-            `FPS..............: ${this.framesPerSecond.toFixed(2)}`
+      `Clients Count....: ${roomState.currentClientsCount}`,
+      `Max Clients......: ${roomState.maxClientsCountLastMinute}`,
+      `High Score Player: ${roomState.highestScorePlayer}`,
+      `High Score.......: ${roomState.highestScore}`,
+      `Max fr per update: ${this.maxFramesBetweenState}`,
+      `Server LPS.......: ${roomState.gameUpdateCyclesPerSecond.toFixed(2)}`,
+      `Server UPS.......: ${this.updatesPerSecond.toFixed(2)}`,
+      `FPS..............: ${this.framesPerSecond.toFixed(2)}`,
     ];
 
     const xOffset = 20; // Adjust this as needed
     const yOffset = 20; // Adjust this as needed
 
     for (let i = 0; i < metrics.length; i++) {
-      ctx.fillText(metrics[i], xOffset, yOffset + (i * fontSize));
+      ctx.fillText(metrics[i], xOffset, yOffset + i * fontSize);
     }
   }
 
-  renderInstructions (ctx: CanvasRenderingContext2D) {
+  renderInstructions(ctx: CanvasRenderingContext2D) {
     const fontSize = 14;
     ctx.font = `${fontSize}px Courier`;
     ctx.fillStyle = "blue";
@@ -281,27 +298,27 @@ export class SSGameEngineClient {
       "Space to fire",
       "L to toggle labels",
       "K to toggle metrics",
-      "I to toggle these instructions"
+      "I to toggle these instructions",
     ];
 
     const xOffset = 20; // Adjust this as needed
     const yOffset = 200; // Adjust this as needed
 
     for (let i = 0; i < instructions.length; i++) {
-      ctx.fillText(instructions[i], xOffset, yOffset + (i * fontSize));
+      ctx.fillText(instructions[i], xOffset, yOffset + i * fontSize);
     }
   }
 
-  getSortedPlayers (roomState: any) {
+  getSortedPlayers(roomState: any) {
     const playersArray = Array.from(roomState.players.entries());
     return playersArray.sort((a, b) => b[1].score - a[1].score);
   }
 
-  setSessionID (newSessionID: string) {
+  setSessionID(newSessionID: string) {
     this.playerSessionID = newSessionID;
   }
 
-  async updateFromServer (roomState: any) {
+  async updateFromServer(roomState: any) {
     // Update state received from the server
     // keeping track of the timestep and resetting the counter to check
     // frames without update
@@ -347,20 +364,23 @@ export class SSGameEngineClient {
     // Any IDs left over in newStateIDs are new players, so add them to the map
     for (const sessionID of newStateIDs) {
       const playerServerState = roomState.players[sessionID];
-      this.playerShips.set(sessionID, new PlayerShip(
-        playerServerState.x,
-        playerServerState.y,
-        playerServerState.vx,
-        playerServerState.vy,
-        playerServerState.direction,
-        playerServerState.vr,
-        playerServerState.accel,
-        playerServerState.name,
-        playerServerState.firing,
-        playerServerState.lastFired,
-        playerServerState.score,
-        sessionID
-      ));
+      this.playerShips.set(
+        sessionID,
+        new PlayerShip(
+          playerServerState.x,
+          playerServerState.y,
+          playerServerState.vx,
+          playerServerState.vy,
+          playerServerState.direction,
+          playerServerState.vr,
+          playerServerState.accel,
+          playerServerState.name,
+          playerServerState.firing,
+          playerServerState.lastFired,
+          playerServerState.score,
+          sessionID
+        )
+      );
     }
   }
 }
