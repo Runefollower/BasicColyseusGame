@@ -1,41 +1,38 @@
-import { Client } from "colyseus";
-import { GameState, Player, Laser } from "./GameState";
+import { type Client } from "colyseus";
+import { type GameState, Player, Laser } from "./GameState";
 import { logWithTimestamp } from "./ServerTools";
 
-
-let SimpleGameMetrics = {
+const SimpleGameMetrics = {
   playAreaWidth: 1200,
   playAreaHeight: 800,
   acceleration: 0.01,
   angularAcceleration: 0.005,
   drag: -0.01,
-  laserSpeed: .4,
+  laserSpeed: 0.4,
   playerRadius: 10,
-  fireDelayInterval: 200,
-}
+  fireDelayInterval: 200
+};
 
 // Controls for metrics updates
 let nextMinuteUpdate = 0;
 let nextLogMetricsUpdate = 0;
 
-
-
 export class SimpleGameLogic {
   state: GameState;
   gameUpdateTimestamps: number[];
 
-  constructor(state: GameState) {
+  constructor (state: GameState) {
     this.state = state;
-    this.gameUpdateTimestamps = []; 
+    this.gameUpdateTimestamps = [];
   }
 
-  getInitializationData() {
+  getInitializationData () {
     return SimpleGameMetrics;
   }
 
-  handleInput(client: Client, input: string) {
+  handleInput (client: Client, input: string) {
     if (this.state.players.has(client.sessionId)) {
-      let player = this.state.players.get(client.sessionId);
+      const player = this.state.players.get(client.sessionId);
 
       switch (input) {
         case "w-down":
@@ -68,15 +65,15 @@ export class SimpleGameLogic {
     }
   }
 
-  addPlayer(client: Client, username: string) {
+  addPlayer (client: Client, username: string) {
     this.state.players.set(client.sessionId, new Player(username, Math.random() * 800, Math.random() * 600));
   }
 
-  removePlayer(client: Client) {
+  removePlayer (client: Client) {
     this.state.players.delete(client.sessionId);
   }
 
-  update(deltaTime: number, elapsedTime: number) {
+  update (deltaTime: number, elapsedTime: number) {
     this.state.players.forEach((player, sessionId) => {
       player.vx += Math.cos(player.direction) * player.accel + SimpleGameMetrics.drag * player.vx;
       player.vy += Math.sin(player.direction) * player.accel + SimpleGameMetrics.drag * player.vy;
@@ -98,8 +95,6 @@ export class SimpleGameLogic {
       }
 
       player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
-
-
 
       if (player.firing && (elapsedTime - player.lastFired >= SimpleGameMetrics.fireDelayInterval)) {
         this.state.lasers.push(new Laser(
@@ -135,10 +130,9 @@ export class SimpleGameLogic {
           // Laser hit a ship, increment score, remove the ship and the laser
           const attacker = this.state.players.get(laser.ownerSessionId);
 
-          //check that you did not shoot yourself
+          // check that you did not shoot yourself
           if (attacker && (attacker !== player)) {
             attacker.score += 1;
-
 
             // Respawn the hit player in a random location
             player.x = Math.random() * SimpleGameMetrics.playAreaWidth;
@@ -170,7 +164,7 @@ export class SimpleGameLogic {
     this.updateMetrics(elapsedTime);
   }
 
-  updateMetrics(elapsedTime: number) {
+  updateMetrics (elapsedTime: number) {
     // Update client count
     this.state.currentClientsCount = this.state.players.size;
     this.state.maxClientsCountLastMinute = Math.max(this.state.currentClientsCount, this.state.maxClientsCountLastMinute);
@@ -179,7 +173,7 @@ export class SimpleGameLogic {
     this.gameUpdateTimestamps.push(elapsedTime);
     if (this.gameUpdateTimestamps.length > 50) {
       const firstTimestamp = this.gameUpdateTimestamps.shift();
-      const secondsPassed = (elapsedTime - firstTimestamp!) / 1000;
+      const secondsPassed = (elapsedTime - firstTimestamp) / 1000;
       this.state.gameUpdateCyclesPerSecond = 50 / secondsPassed;
     }
 
@@ -202,6 +196,5 @@ export class SimpleGameLogic {
 
       logWithTimestamp(`Clients Count: ${this.state.currentClientsCount}, Max Clients: ${this.state.maxClientsCountLastMinute}, UPS: ${this.state.gameUpdateCyclesPerSecond.toFixed(2)}, High Score: ${this.state.highestScorePlayer} ${this.state.highestScore}`);
     }
-    
   }
 }
