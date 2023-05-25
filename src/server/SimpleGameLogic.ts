@@ -2,17 +2,34 @@ import { Client } from "colyseus";
 import { GameState, Player, Laser } from "./GameState";
 import { logWithTimestamp } from "./ServerTools";
 
+let gridSize = 100;
 
 let SimpleGameMetrics = {
-  playAreaWidth: 3000,
-  playAreaHeight: 3000,
+  gridSize: gridSize,
+  playAreaWidth: gridSize * 100,
+  playAreaHeight: gridSize * 100,
+  cellSize: 100,
   acceleration: 0.01,
   angularAcceleration: 0.005,
   drag: -0.01,
   laserSpeed: .4,
   playerRadius: 10,
   fireDelayInterval: 200,
+
+  // Initialize the grid as an empty grid (no walls)
+  grid: Array(gridSize).fill(undefined).map(() => Array(gridSize).fill(0b0000)) // binary for no walls
 }
+
+
+// Now you can use bitwise OR to set wall values
+// Define some constants for readability
+const T = 0b0001;
+const R = 0b0010;
+const B = 0b0100;
+const L = 0b1000;
+
+
+
 
 // Controls for metrics updates
 let nextMinuteUpdate = 0;
@@ -26,7 +43,97 @@ export class SimpleGameLogic {
 
   constructor(state: GameState) {
     this.state = state;
-    this.gameUpdateTimestamps = []; 
+    this.gameUpdateTimestamps = [];
+
+    this.populateGrid();
+    this.removeLockedWalls();
+  }
+
+  populateGrid() {
+    // Initialize the grid as an empty grid (no walls)
+    let grid: number[][] = Array(gridSize).fill(undefined).map(() => Array(gridSize).fill(0b0000)); // binary for no walls
+
+    // Randomly generate walls
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        // For cells not on the boundary
+        if (x > 0 && x < gridSize - 1 && y > 0 && y < gridSize - 1) {
+          // Randomly decide if there should be a wall on the right
+          if (Math.random() < 0.2) {
+            grid[y][x] |= R;
+            grid[y][x + 1] |= L;
+          }
+          // Randomly decide if there should be a wall on the bottom
+          if (Math.random() < 0.2) {
+            grid[y][x] |= B;
+            grid[y + 1][x] |= T;
+          }
+        }
+
+        // For cells on the boundary
+        if (x == 0) {
+          grid[y][x] |= L;
+        }
+        if (x == gridSize - 1) {
+          grid[y][x] |= R;
+        }
+        if (y == 0) {
+          grid[y][x] |= T;
+        }
+        if (y == gridSize - 1) {
+          grid[y][x] |= B;
+        }
+      }
+    }
+
+    SimpleGameMetrics.grid = grid;
+  }
+
+  removeLockedWalls() {
+    // Create a grid to track visited cells
+    let visited = Array(gridSize).fill(false).map(() => Array(gridSize).fill(false));
+  
+    // Recursive function to perform the depth-first search
+    function dfs(x: number, y: number) {
+      // Return if the cell is out of bounds or already visited
+      if (x < 0 || y < 0 || x >= gridSize || y >= gridSize || visited[y][x]) {
+        return;
+      }
+  
+      // Mark the cell as visited
+      visited[y][x] = true;
+  
+      // Visit all adjacent cells
+      if ((SimpleGameMetrics.grid[y][x] & T) == 0) {
+        dfs(x, y - 1);
+      }
+      if ((SimpleGameMetrics.grid[y][x] & R) == 0) {
+        dfs(x + 1, y);
+      }
+      if ((SimpleGameMetrics.grid[y][x] & B) == 0) {
+        dfs(x, y + 1);
+      }
+      if ((SimpleGameMetrics.grid[y][x] & L) == 0) {
+        dfs(x - 1, y);
+      }
+    }
+  
+    // Start the search from the top-left cell (or any cell on the boundary)
+    dfs(0, 0);
+  
+    // Check for cells that weren't visited and remove a wall to make them reachable
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        if (!visited[y][x]) {
+          // Remove a wall. In this case, we'll remove the top wall, but you can choose any wall depending on your needs
+          SimpleGameMetrics.grid[y][x] &= ~T;
+          // If not in the top row, add a corresponding opening in the cell above
+          if (y > 0) {
+            SimpleGameMetrics.grid[y - 1][x] &= ~B;
+          }
+        }
+      }
+    }
   }
 
   getInitializationData() {
@@ -78,11 +185,43 @@ export class SimpleGameLogic {
 
   update(deltaTime: number, elapsedTime: number) {
     this.state.players.forEach((player, sessionId) => {
-      player.vx += Math.cos(player.direction) * player.accel + SimpleGameMetrics.drag * player.vx;
-      player.vy += Math.sin(player.direction) * player.accel + SimpleGameMetrics.drag * player.vy;
+      // Compute proposed new position
+      let newVx = player.vx + Math.cos(player.direction) * player.accel + SimpleGameMetrics.drag * player.vx;
+      let newVy = player.vy + Math.sin(player.direction) * player.accel + SimpleGameMetrics.drag * player.vy;
+      let newX = player.x + newVx * deltaTime;
+      let newY = player.y + newVy * deltaTime;
 
-      player.x += player.vx * deltaTime;
-      player.y += player.vy * deltaTime;
+      // Check if proposed new position would collide with a wall
+      let gridX = Math.max(0, Math.min(SimpleGameMetrics.gridSize - 1, Math.floor(player.x / SimpleGameMetrics.cellSize)));
+      let gridY = Math.max(0, Math.min(SimpleGameMetrics.gridSize - 1, Math.floor(player.y / SimpleGameMetrics.cellSize)));
+      let gridCell = SimpleGameMetrics.grid[gridY][gridX];
+
+      if ((gridCell & R) && newX - (gridX * SimpleGameMetrics.cellSize) + SimpleGameMetrics.playerRadius > SimpleGameMetrics.cellSize) {
+        // Collided with right wall
+        newVx = 0;  // Stop horizontal movement
+        newX = gridX * SimpleGameMetrics.cellSize + SimpleGameMetrics.cellSize - SimpleGameMetrics.playerRadius; // Move to the left of the wall
+      } else if ((gridCell & L) && newX - (gridX * SimpleGameMetrics.cellSize) - SimpleGameMetrics.playerRadius < 0) {
+        // Collided with left wall
+        newVx = 0;  // Stop horizontal movement
+        newX = gridX * SimpleGameMetrics.cellSize + SimpleGameMetrics.playerRadius; // Move to the right of the wall
+      }
+
+      if ((gridCell & B) && newY - (gridY * SimpleGameMetrics.cellSize) + SimpleGameMetrics.playerRadius > SimpleGameMetrics.cellSize) {
+        // Collided with bottom wall
+        newVy = 0;  // Stop vertical movement
+        newY = gridY * SimpleGameMetrics.cellSize + SimpleGameMetrics.cellSize - SimpleGameMetrics.playerRadius; // Move above the wall
+      } else if ((gridCell & T) && newY - (gridY * SimpleGameMetrics.cellSize) - SimpleGameMetrics.playerRadius < 0) {
+        // Collided with top wall
+        newVy = 0;  // Stop vertical movement
+        newY = gridY * SimpleGameMetrics.cellSize + SimpleGameMetrics.playerRadius; // Move below the wall
+      }
+
+      // Update player position and velocity
+      player.vx = newVx;
+      player.vy = newVy;
+      player.x = newX;
+      player.y = newY;
+
       player.direction += player.vr * deltaTime;
 
       if (player.x > SimpleGameMetrics.playAreaWidth) {
@@ -202,6 +341,6 @@ export class SimpleGameLogic {
 
       logWithTimestamp(`Clients Count: ${this.state.currentClientsCount}, Max Clients: ${this.state.maxClientsCountLastMinute}, UPS: ${this.state.gameUpdateCyclesPerSecond.toFixed(2)}, High Score: ${this.state.highestScorePlayer} ${this.state.highestScore}`);
     }
-    
+
   }
 }

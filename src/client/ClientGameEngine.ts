@@ -27,6 +27,13 @@ export class SSGameEngineClient {
     //The dimension of the displayed region
     gameAreaWidth = 100;
     gameAreaHeight = 100;
+    gridSize: number;
+    cellSize: number;
+    gameGrid: number[][];
+    TOP = 0b0001;
+    RIGHT = 0b0010;
+    BOTTOM = 0b0100;
+    LEFT = 0b1000;
 
     /*
      *Client side performance stats
@@ -57,7 +64,7 @@ export class SSGameEngineClient {
 
     constructor() {
         this.ssRenderer = new SpaceShipRender();
-        
+
         //Initialize metrics to keep track of the framerate
         //and rate of server updates
         this.lastStateUpdate = performance.now();
@@ -90,14 +97,18 @@ export class SSGameEngineClient {
         ctx.save();
 
         const thisPlayer = this.playerShips.get(this.playerSessionID);
-        if(thisPlayer) {
-            ctx.translate((this.displayWidth/2)-thisPlayer.rx, (this.displayHeight/2) - thisPlayer.ry);
+        if (thisPlayer) {
+            ctx.translate((this.displayWidth / 2) - thisPlayer.rx, (this.displayHeight / 2) - thisPlayer.ry);
         } else {
-            ctx.translate((this.displayWidth-this.gameAreaWidth)/2, (this.displayHeight-this.gameAreaHeight)/2);
+            ctx.translate((this.displayWidth - this.gameAreaWidth) / 2, (this.displayHeight - this.gameAreaHeight) / 2);
         }
 
         ctx.fillStyle = "rgb(255 255 255)";
         ctx.fillRect(0, 0, this.gameAreaWidth, this.gameAreaHeight);
+
+        if(this.gameGrid) {
+            this.drawGrid(ctx);
+        }
 
         this.renderUpdateTimestamps.push(elapsedTime);
         if (this.renderUpdateTimestamps.length > 50) {
@@ -145,6 +156,51 @@ export class SSGameEngineClient {
 
         if (this.showInstructions) {
             this.renderInstructions(ctx);
+        }
+    }
+
+    drawGrid(context: CanvasRenderingContext2D) {
+        context.strokeStyle = 'black'; // color of the walls
+        context.lineWidth = 4; // width of the walls
+
+        for (let y = 0; y < this.gameGrid.length; y++) {
+            for (let x = 0; x < this.gameGrid[y].length; x++) {
+                let cell = this.gameGrid[y][x];
+                let xPos = x * this.cellSize;
+                let yPos = y * this.cellSize;
+
+                // Draw top wall
+                if (cell & this.TOP) {
+                    context.beginPath();
+                    context.moveTo(xPos, yPos);
+                    context.lineTo(xPos + this.cellSize, yPos);
+                    context.stroke();
+                }
+
+                // Draw right wall
+                if (cell & this.RIGHT) {
+                    context.beginPath();
+                    context.moveTo(xPos + this.cellSize, yPos);
+                    context.lineTo(xPos + this.cellSize, yPos + this.cellSize);
+                    context.stroke();
+                }
+
+                // Draw bottom wall
+                if (cell & this.BOTTOM) {
+                    context.beginPath();
+                    context.moveTo(xPos + this.cellSize, yPos + this.cellSize);
+                    context.lineTo(xPos, yPos + this.cellSize);
+                    context.stroke();
+                }
+
+                // Draw left wall
+                if (cell & this.LEFT) {
+                    context.beginPath();
+                    context.moveTo(xPos, yPos + this.cellSize);
+                    context.lineTo(xPos, yPos);
+                    context.stroke();
+                }
+            }
         }
     }
 

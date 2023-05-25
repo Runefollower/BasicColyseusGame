@@ -58,6 +58,10 @@ let username: string | null = null;
     canvas.height = gameDiv.clientHeight;
     gameEngine.gameAreaWidth  = gameMetrics.playAreaWidth;
     gameEngine.gameAreaHeight = gameMetrics.playAreaHeight;
+    gameEngine.gridSize  = gameMetrics.gridSize;
+    gameEngine.cellSize  = gameMetrics.cellSize;
+    gameEngine.gameGrid  = gameMetrics.grid;
+    
     gameEngine.displayWidth   = canvas.width;
     gameEngine.displayHeight  = canvas.height;
   });
