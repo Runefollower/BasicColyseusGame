@@ -1,5 +1,4 @@
-
-/* 
+/*
  * Smoke particles, the individual particles
  * and the particle emitter for the smoke particle effect
  */
@@ -23,8 +22,8 @@ class Particle {
   }
 
   update(dt: number) {
-    this.vx -= .001 * this.vx * dt;
-    this.vy -= .001 * this.vy * dt;
+    this.vx -= 0.001 * this.vx * dt;
+    this.vy -= 0.001 * this.vy * dt;
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
@@ -46,10 +45,17 @@ class ParticleEmitter {
     this.particles = [];
   }
 
-  emit(x: number, y: number, svx: number, svy: number, direction: number, speed: number) {
+  emit(
+    x: number,
+    y: number,
+    svx: number,
+    svy: number,
+    direction: number,
+    speed: number
+  ) {
     const angle = direction + (Math.random() - 0.5) * (Math.PI / 6);
-    const vx = (Math.cos(angle) * speed) + svx;
-    const vy = (Math.sin(angle) * speed) + svy;
+    const vx = Math.cos(angle) * speed + svx;
+    const vy = Math.sin(angle) * speed + svy;
     const life = Math.random() * 500 + 500; // Random life between 0.5 and 1 seconds
     this.particles.push(new Particle(x, y, vx, vy, life));
   }
@@ -71,9 +77,6 @@ class ParticleEmitter {
     });
   }
 }
-
-
-
 
 export class SpaceShipRender {
   particleEmitter: ParticleEmitter;
@@ -105,18 +108,18 @@ export class SpaceShipRender {
     ctx.translate(x, y);
     ctx.rotate(direction);
 
-    //Render the ship
+    // Render the ship
     ctx.beginPath();
-    ctx.moveTo(10, 0);  // Forward point of the triangle
-    ctx.lineTo(-6, 7);  // Bottom right point of the triangle
-    ctx.lineTo(-3, 0);  // Center of engine
+    ctx.moveTo(10, 0); // Forward point of the triangle
+    ctx.lineTo(-6, 7); // Bottom right point of the triangle
+    ctx.lineTo(-3, 0); // Center of engine
     ctx.lineTo(-6, -7); // Bottom left point of the triangle
     ctx.closePath();
 
     ctx.fillStyle = color;
     ctx.fill();
 
-    //Render a flame when accelerating
+    // Render a flame when accelerating
     if (accel > 0) {
       ctx.beginPath();
       ctx.moveTo(-4, 0);
@@ -132,7 +135,14 @@ export class SpaceShipRender {
         // Emit smoke particles
         const smokeX = x - 20 * Math.cos(direction);
         const smokeY = y - 20 * Math.sin(direction);
-        this.particleEmitter.emit(smokeX, smokeY, vx, vy, direction + Math.PI, .03);
+        this.particleEmitter.emit(
+          smokeX,
+          smokeY,
+          vx,
+          vy,
+          direction + Math.PI,
+          0.03
+        );
       }
     }
 
@@ -143,11 +153,15 @@ export class SpaceShipRender {
       ctx.translate(x, y);
       const fontSize = 9;
       ctx.font = "10px Courier";
-      ctx.textAlign = 'right';
+      ctx.textAlign = "right";
       ctx.fillStyle = color;
       const labelMetrics = ctx.measureText(name);
 
-      ctx.fillText(name, labelMetrics.width / 2, labelMetrics.actualBoundingBoxAscent + 10);
+      ctx.fillText(
+        name,
+        labelMetrics.width / 2,
+        labelMetrics.actualBoundingBoxAscent + 10
+      );
       ctx.restore();
     }
 

@@ -74,7 +74,14 @@ export class Laser extends Schema {
   @type("string")
   ownerSessionId: string;
 
-  constructor(x: number, y: number, vx: number, vy: number, direction: number, ownerSessionId: string) {
+  constructor(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    direction: number,
+    ownerSessionId: string
+  ) {
     super();
     this.x = x;
     this.y = y;
@@ -85,7 +92,6 @@ export class Laser extends Schema {
     this.remainingTime = 1000;
   }
 }
-
 
 export class GameState extends Schema {
   @type({ map: Player })
@@ -117,7 +123,7 @@ export class GameState extends Schema {
     this.gameUpdateCyclesPerSecond = 0;
     this.currentClientsCount = 0;
     this.maxClientsCountLastMinute = 0;
-    this.highestScorePlayer = '';
+    this.highestScorePlayer = "";
     this.highestScore = 0;
   }
 }

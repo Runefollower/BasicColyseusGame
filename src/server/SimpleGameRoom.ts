@@ -9,6 +9,7 @@ import { SimpleGameLogic } from "./SimpleGameLogic";
 import { logWithTimestamp } from "./ServerTools";
 
 let staticRoot = "../web";
+
 const devMode = process.argv.includes("-d") ? true : false;
 
 if (devMode) {
@@ -25,7 +26,7 @@ app.use("/", express.static(path.join(__dirname, staticRoot)));
 
 const gameServer = new Server({
   server: http.createServer(app),
-  //express: app,
+  // express: app,
 });
 
 export class SimpleGameRoom extends Room<GameState> {
