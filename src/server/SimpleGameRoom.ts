@@ -9,7 +9,10 @@ import { SimpleGameLogic } from "./SimpleGameLogic";
 import { logWithTimestamp } from "./ServerTools";
 
 let staticRoot = "../web";
-if (process.argv.includes("-d")) {
+
+const devMode = process.argv.includes("-d") ? true : false;
+
+if (devMode) {
   logWithTimestamp("Running in dev mode");
   staticRoot = "../../dist/web";
 } else {
@@ -59,9 +62,9 @@ export class SimpleGameRoom extends Room<GameState> {
     });
 
     // Set up the game loop
-    this.setSimulationInterval((deltaTime) => {
-      this.gameLogic.update(deltaTime, this.clock.elapsedTime);
-    });
+    this.setSimulationInterval((deltaTime) =>
+      this.gameLogic.update(deltaTime, this.clock.elapsedTime)
+    );
   }
 
   async onJoin(client) {
@@ -83,3 +86,9 @@ export class SimpleGameRoom extends Room<GameState> {
 
 gameServer.define("game", SimpleGameRoom);
 gameServer.listen(3000);
+
+if (devMode) {
+  logWithTimestamp(
+    "The game is now running at http://localhost:3000/index.html"
+  );
+}
