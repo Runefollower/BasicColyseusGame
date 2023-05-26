@@ -1,43 +1,41 @@
-
 import { SSGameEngineClient } from "./ClientGameEngine";
-import * as Colyseus from 'colyseus.js';
+import * as Colyseus from "colyseus.js";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const gameDiv = document.getElementById("game-div") as HTMLCanvasElement;
-const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+const ctx = canvas.getContext("2d");
 
 const gamePrefix = "/BasicGameServer/";
-//const gamePrefix="";
-const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-const client = new Colyseus.Client(`${protocol}://${window.location.hostname}:${window.location.port}${gamePrefix}`);
+// const gamePrefix="";
+const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+const client = new Colyseus.Client(
+  `${protocol}://${window.location.hostname}:${window.location.port}${gamePrefix}`
+);
 let room: Colyseus.Room;
 let gameMetrics: any;
 
-let gameEngine: SSGameEngineClient = new SSGameEngineClient();
+const gameEngine: SSGameEngineClient = new SSGameEngineClient();
 
 let lastStateUpdate = performance.now();
 let lastFrameRender = performance.now();
-
-
-
 
 function render() {
   ctx.fillStyle = "rgb(230 230 230)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  let thisFrameRender = performance.now();
-  let udt = thisFrameRender - lastStateUpdate;
-  let dt = thisFrameRender - lastFrameRender;
+  const thisFrameRender = performance.now();
+  const udt = thisFrameRender - lastStateUpdate;
+  const dt = thisFrameRender - lastFrameRender;
   lastFrameRender = thisFrameRender;
 
   gameEngine.update(udt, dt, thisFrameRender);
 
   gameEngine.draw(ctx, udt, thisFrameRender, room.state);
 
-  requestAnimationFrame(() => render());
+  requestAnimationFrame(() => {
+    render();
+  });
 }
-
-
 
 // Make this a let so it can be set when the username is entered.
 let username: string | null = null;
@@ -46,24 +44,23 @@ let username: string | null = null;
   room = await client.joinOrCreate("game");
   gameEngine.setSessionID(room.sessionId);
 
-  room.onStateChange.once(() => {
-  });
+  room.onStateChange.once(() => {});
 
-  room.onMessage('init', (message) => {
+  room.onMessage("init", (message) => {
     // retrieve initialization metrics
     gameMetrics = message;
 
     // Resize canvas to match game area dimensions
     canvas.width = gameDiv.clientWidth;
     canvas.height = gameDiv.clientHeight;
-    gameEngine.gameAreaWidth  = gameMetrics.playAreaWidth;
+    gameEngine.gameAreaWidth = gameMetrics.playAreaWidth;
     gameEngine.gameAreaHeight = gameMetrics.playAreaHeight;
-    gameEngine.gridSize  = gameMetrics.gridSize;
-    gameEngine.cellSize  = gameMetrics.cellSize;
-    gameEngine.gameGrid  = gameMetrics.grid;
+    gameEngine.gridSize = gameMetrics.gridSize;
+    gameEngine.cellSize = gameMetrics.cellSize;
+    gameEngine.gameGrid = gameMetrics.grid;
 
-    gameEngine.displayWidth   = canvas.width;
-    gameEngine.displayHeight  = canvas.height;
+    gameEngine.displayWidth = canvas.width;
+    gameEngine.displayHeight = canvas.height;
   });
 
   room.onStateChange(() => {
@@ -75,39 +72,39 @@ let username: string | null = null;
   document.addEventListener("keydown", (event) => {
     if (username) {
       switch (event.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'W':
+        case "ArrowUp":
+        case "w":
+        case "W":
           room.send("input", "w-down");
           break;
-        case 'ArrowDown':
-        case 's':
-        case 'S':
+        case "ArrowDown":
+        case "s":
+        case "S":
           room.send("input", "s-down");
           break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'A':
+        case "ArrowLeft":
+        case "a":
+        case "A":
           room.send("input", "a-down");
           break;
-        case 'ArrowRight':
-        case 'd':
-        case 'D':
+        case "ArrowRight":
+        case "d":
+        case "D":
           room.send("input", "d-down");
           break;
-        case ' ':
+        case " ":
           room.send("input", "fire-down");
           break;
-        case 'l':
-        case 'L':
+        case "l":
+        case "L":
           gameEngine.showPlayerLabels = !gameEngine.showPlayerLabels;
           break;
-        case 'k':
-        case 'K':
+        case "k":
+        case "K":
           gameEngine.showServerMetrics = !gameEngine.showServerMetrics;
           break;
-        case 'i':
-        case 'I':
+        case "i":
+        case "I":
           gameEngine.showInstructions = !gameEngine.showInstructions;
           break;
       }
@@ -117,41 +114,41 @@ let username: string | null = null;
   document.addEventListener("keyup", (event) => {
     if (username) {
       switch (event.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'W':
+        case "ArrowUp":
+        case "w":
+        case "W":
           room.send("input", "w-up");
           break;
-        case 'ArrowDown':
-        case 's':
-        case 'S':
+        case "ArrowDown":
+        case "s":
+        case "S":
           room.send("input", "s-up");
           break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'A':
+        case "ArrowLeft":
+        case "a":
+        case "A":
           room.send("input", "a-up");
           break;
-        case 'ArrowRight':
-        case 'd':
-        case 'D':
+        case "ArrowRight":
+        case "d":
+        case "D":
           room.send("input", "d-up");
           break;
-        case ' ':
+        case " ":
           room.send("input", "fire-up");
           break;
       }
     }
   });
 
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     // Resize canvas to match game area dimensions
     canvas.width = gameDiv.clientWidth;
     canvas.height = gameDiv.clientHeight;
-    
+
     // Update game engine display dimensions
-    gameEngine.displayWidth   = canvas.width;
-    gameEngine.displayHeight  = canvas.height;
+    gameEngine.displayWidth = canvas.width;
+    gameEngine.displayHeight = canvas.height;
   });
 
   render();
@@ -173,6 +170,3 @@ document.getElementById("connect").addEventListener("click", async () => {
   room.send("joinGame", username);
   gameEngine.showInstructions = true;
 });
-
-
-
