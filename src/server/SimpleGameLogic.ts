@@ -45,7 +45,7 @@ export class SimpleGameLogic {
     this.removeLockedWalls();
   }
 
-  populateGrid() {
+  populateGrid(): void {
     // Initialize the grid as an empty grid (no walls)
     const grid: number[][] = Array(gridSize)
       .fill(undefined)
@@ -69,16 +69,16 @@ export class SimpleGameLogic {
         }
 
         // For cells on the boundary
-        if (x == 0) {
+        if (x === 0) {
           grid[y][x] |= L;
         }
-        if (x == gridSize - 1) {
+        if (x === gridSize - 1) {
           grid[y][x] |= R;
         }
-        if (y == 0) {
+        if (y === 0) {
           grid[y][x] |= T;
         }
-        if (y == gridSize - 1) {
+        if (y === gridSize - 1) {
           grid[y][x] |= B;
         }
       }
@@ -87,16 +87,22 @@ export class SimpleGameLogic {
     SimpleGameMetrics.grid = grid;
   }
 
-  removeLockedWalls() {
+  removeLockedWalls(): void {
     // Create a grid to track visited cells
     const visited = Array(gridSize)
       .fill(false)
       .map(() => Array(gridSize).fill(false));
 
     // Recursive function to perform the depth-first search
-    function dfs(x: number, y: number) {
+    function dfs(x: number, y: number): void {
       // Return if the cell is out of bounds or already visited
-      if (x < 0 || y < 0 || x >= gridSize || y >= gridSize || visited[y][x]) {
+      if (
+        x < 0 ||
+        y < 0 ||
+        x >= gridSize ||
+        y >= gridSize ||
+        visited[y][x] === true
+      ) {
         return;
       }
 
@@ -104,16 +110,16 @@ export class SimpleGameLogic {
       visited[y][x] = true;
 
       // Visit all adjacent cells
-      if ((SimpleGameMetrics.grid[y][x] & T) == 0) {
+      if ((SimpleGameMetrics.grid[y][x] & T) === 0) {
         dfs(x, y - 1);
       }
-      if ((SimpleGameMetrics.grid[y][x] & R) == 0) {
+      if ((SimpleGameMetrics.grid[y][x] & R) === 0) {
         dfs(x + 1, y);
       }
-      if ((SimpleGameMetrics.grid[y][x] & B) == 0) {
+      if ((SimpleGameMetrics.grid[y][x] & B) === 0) {
         dfs(x, y + 1);
       }
-      if ((SimpleGameMetrics.grid[y][x] & L) == 0) {
+      if ((SimpleGameMetrics.grid[y][x] & L) === 0) {
         dfs(x - 1, y);
       }
     }
@@ -124,7 +130,7 @@ export class SimpleGameLogic {
     // Check for cells that weren't visited and remove a wall to make them reachable
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-        if (!visited[y][x]) {
+        if (visited[y][x] === false) {
           // Remove a wall. In this case, we'll remove the top wall, but you can choose any wall depending on your needs
           SimpleGameMetrics.grid[y][x] &= ~T;
           // If not in the top row, add a corresponding opening in the cell above
@@ -136,11 +142,11 @@ export class SimpleGameLogic {
     }
   }
 
-  getInitializationData() {
+  getInitializationData(): any {
     return SimpleGameMetrics;
   }
 
-  handleInput(client: Client, input: string) {
+  handleInput(client: Client, input: string): void {
     if (this.state.players.has(client.sessionId)) {
       const player = this.state.players.get(client.sessionId);
 
@@ -175,7 +181,7 @@ export class SimpleGameLogic {
     }
   }
 
-  addPlayer(client: Client, username: string) {
+  addPlayer(client: Client, username: string): void {
     this.state.players.set(
       client.sessionId,
       new Player(
@@ -186,11 +192,11 @@ export class SimpleGameLogic {
     );
   }
 
-  removePlayer(client: Client) {
+  removePlayer(client: Client): void {
     this.state.players.delete(client.sessionId);
   }
 
-  update(deltaTime: number, elapsedTime: number) {
+  update(deltaTime: number, elapsedTime: number): void {
     this.state.players.forEach((player, sessionId) => {
       // Compute proposed new position
       let newVx =
@@ -222,7 +228,7 @@ export class SimpleGameLogic {
       const gridCell = SimpleGameMetrics.grid[gridY][gridX];
 
       if (
-        gridCell & R &&
+        (gridCell & R) !== 0 &&
         newX -
           gridX * SimpleGameMetrics.cellSize +
           SimpleGameMetrics.playerRadius >
@@ -235,7 +241,7 @@ export class SimpleGameLogic {
           SimpleGameMetrics.cellSize -
           SimpleGameMetrics.playerRadius; // Move to the left of the wall
       } else if (
-        gridCell & L &&
+        (gridCell & L) !== 0 &&
         newX -
           gridX * SimpleGameMetrics.cellSize -
           SimpleGameMetrics.playerRadius <
@@ -248,7 +254,7 @@ export class SimpleGameLogic {
       }
 
       if (
-        gridCell & B &&
+        (gridCell & B) !== 0 &&
         newY -
           gridY * SimpleGameMetrics.cellSize +
           SimpleGameMetrics.playerRadius >
@@ -261,7 +267,7 @@ export class SimpleGameLogic {
           SimpleGameMetrics.cellSize -
           SimpleGameMetrics.playerRadius; // Move above the wall
       } else if (
-        gridCell & T &&
+        (gridCell & T) !== 0 &&
         newY -
           gridY * SimpleGameMetrics.cellSize -
           SimpleGameMetrics.playerRadius <
@@ -329,7 +335,7 @@ export class SimpleGameLogic {
 
     // Check for collisions between lasers and ships
     for (const laser of this.state.lasers) {
-      for (const [sessionId, player] of this.state.players.entries()) {
+      for (const player of this.state.players.values()) {
         const dx = laser.x - player.x;
         const dy = laser.y - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -339,7 +345,11 @@ export class SimpleGameLogic {
           const attacker = this.state.players.get(laser.ownerSessionId);
 
           // check that you did not shoot yourself
-          if (attacker && attacker !== player) {
+          if (
+            attacker !== null &&
+            attacker !== undefined &&
+            attacker !== player
+          ) {
             attacker.score += 1;
 
             // Respawn the hit player in a random location
@@ -354,13 +364,13 @@ export class SimpleGameLogic {
 
             logWithTimestamp(
               "PlayerHit    " +
-                attacker.username +
+                String(attacker.username) +
                 " hit " +
-                player.username +
+                String(player.username) +
                 ", " +
-                attacker.username +
+                String(attacker.username) +
                 " score:" +
-                attacker.score
+                String(attacker.score)
             );
             break;
           }
@@ -381,7 +391,7 @@ export class SimpleGameLogic {
     this.updateMetrics(elapsedTime);
   }
 
-  updateMetrics(elapsedTime: number) {
+  updateMetrics(elapsedTime: number): void {
     // Update client count
     this.state.currentClientsCount = this.state.players.size;
     this.state.maxClientsCountLastMinute = Math.max(

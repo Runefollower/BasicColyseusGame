@@ -1,6 +1,8 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const CopyWebpackPlugin = require("copy-webpack-plugin");
+
+// Needed when or if we have other resources added like images
+// const CopyWebpackPlugin = require("copy-webpack-plugin")
 
 module.exports = {
   mode: "development",
