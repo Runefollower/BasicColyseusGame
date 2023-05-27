@@ -19,28 +19,31 @@ const gameEngine: SSGameEngineClient = new SSGameEngineClient();
 let lastStateUpdate = performance.now();
 let lastFrameRender = performance.now();
 
-function render() {
-  ctx.fillStyle = "rgb(230 230 230)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+function render(): void {
+  // error checking for null on the context
+  if (ctx !== null) {
+    ctx.fillStyle = "rgb(230 230 230)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const thisFrameRender = performance.now();
-  const udt = thisFrameRender - lastStateUpdate;
-  const dt = thisFrameRender - lastFrameRender;
-  lastFrameRender = thisFrameRender;
+    const thisFrameRender = performance.now();
+    const udt = thisFrameRender - lastStateUpdate;
+    const dt = thisFrameRender - lastFrameRender;
+    lastFrameRender = thisFrameRender;
 
-  gameEngine.update(udt, dt, thisFrameRender);
+    gameEngine.update(udt, dt, thisFrameRender);
 
-  gameEngine.draw(ctx, udt, thisFrameRender, room.state);
+    gameEngine.draw(ctx, udt, thisFrameRender, room.state);
 
-  requestAnimationFrame(() => {
-    render();
-  });
+    requestAnimationFrame(() => {
+      render();
+    });
+  }
 }
 
 // Make this a let so it can be set when the username is entered.
 let username: string | null = null;
 
-(async function connectToServer() {
+async function connectToServer(): Promise<string> {
   room = await client.joinOrCreate("game");
   gameEngine.setSessionID(room.sessionId);
 
@@ -70,7 +73,7 @@ let username: string | null = null;
   });
 
   document.addEventListener("keydown", (event) => {
-    if (username) {
+    if (username !== null) {
       switch (event.key) {
         case "ArrowUp":
         case "w":
@@ -112,7 +115,7 @@ let username: string | null = null;
   });
 
   document.addEventListener("keyup", (event) => {
-    if (username) {
+    if (username !== null) {
       switch (event.key) {
         case "ArrowUp":
         case "w":
@@ -152,21 +155,54 @@ let username: string | null = null;
   });
 
   render();
-})();
 
-document.getElementById("connect").addEventListener("click", async () => {
-  username = (document.getElementById("PlayerName") as HTMLInputElement).value;
+  return "connected";
+}
 
-  if (!username.trim()) {
-    alert("Please enter a username.");
-    return;
+connectToServer().then(
+  function (value) {
+    console.log(value);
+  },
+  function (error) {
+    console.log("Failed to connect to server:" + String(error));
   }
+);
 
-  document.getElementById("game-login").style.display = "none";
-  document.getElementById("game-div").style.zIndex = "1";
-  document.getElementById("game-div").style.display = "block";
+if (document !== null) {
+  const connectButton = document.getElementById("connect");
 
-  // Now that we have the username, send it to the server.
-  room.send("joinGame", username);
-  gameEngine.showInstructions = true;
-});
+  if (connectButton === null) {
+    console.log(
+      "Failed to grab the connect button, the HTML should have a login " +
+        'form with a button with id="connect"'
+    );
+  } else {
+    connectButton.addEventListener("click", () => {
+      username = (document.getElementById("PlayerName") as HTMLInputElement)
+        .value;
+
+      if (username.trim() === "") {
+        alert("Please enter a username.");
+        return;
+      }
+
+      const gameLoginElement = document.getElementById("game-login");
+      const gameDivElement = document.getElementById("game-div");
+      if (gameLoginElement === null || gameDivElement === null) {
+        console.log(
+          "Failed to get handle to login or game div, the html should have a " +
+            'div block with form for login with id="game-login" and a div ' +
+            'block for the game with id="game-div"'
+        );
+      } else {
+        gameLoginElement.style.display = "none";
+        gameDivElement.style.zIndex = "1";
+        gameDivElement.style.display = "block";
+      }
+
+      // Now that we have the username, send it to the server.
+      room.send("joinGame", username);
+      gameEngine.showInstructions = true;
+    });
+  }
+}

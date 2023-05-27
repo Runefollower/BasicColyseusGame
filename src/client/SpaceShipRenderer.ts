@@ -21,7 +21,7 @@ class Particle {
     this.alpha = 1;
   }
 
-  update(dt: number) {
+  update(dt: number): void {
     this.vx -= 0.001 * this.vx * dt;
     this.vy -= 0.001 * this.vy * dt;
     this.x += this.vx * dt;
@@ -30,7 +30,7 @@ class Particle {
     this.alpha = Math.max(0, this.life / 1000);
   }
 
-  render(ctx: CanvasRenderingContext2D) {
+  render(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = `rgba(128, 128, 128, ${this.alpha})`;
     ctx.beginPath();
     ctx.arc(this.x, this.y, 2, 0, 2 * Math.PI);
@@ -52,7 +52,7 @@ class ParticleEmitter {
     svy: number,
     direction: number,
     speed: number
-  ) {
+  ): void {
     const angle = direction + (Math.random() - 0.5) * (Math.PI / 6);
     const vx = Math.cos(angle) * speed + svx;
     const vy = Math.sin(angle) * speed + svy;
@@ -60,7 +60,7 @@ class ParticleEmitter {
     this.particles.push(new Particle(x, y, vx, vy, life));
   }
 
-  update(dt: number) {
+  update(dt: number): void {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const particle = this.particles[i];
       particle.update(dt);
@@ -71,7 +71,7 @@ class ParticleEmitter {
     }
   }
 
-  render(ctx: CanvasRenderingContext2D) {
+  render(ctx: CanvasRenderingContext2D): void {
     this.particles.forEach((particle) => {
       particle.render(ctx);
     });
@@ -87,7 +87,7 @@ export class SpaceShipRender {
     this.laserLength = 10;
   }
 
-  update(dt: number) {
+  update(dt: number): void {
     this.particleEmitter.update(dt);
   }
 
@@ -103,7 +103,7 @@ export class SpaceShipRender {
     name: string,
     displayName: boolean,
     displayExhaust: boolean
-  ) {
+  ): void {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(direction);
@@ -151,7 +151,6 @@ export class SpaceShipRender {
     if (displayName) {
       ctx.save();
       ctx.translate(x, y);
-      const fontSize = 9;
       ctx.font = "10px Courier";
       ctx.textAlign = "right";
       ctx.fillStyle = color;
@@ -175,7 +174,7 @@ export class SpaceShipRender {
     y: number,
     direction: number,
     ctx: CanvasRenderingContext2D
-  ) {
+  ): void {
     ctx.strokeStyle = "red";
     ctx.lineWidth = 2;
 

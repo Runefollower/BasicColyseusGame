@@ -76,7 +76,7 @@ export class SSGameEngineClient {
   // Update the game engine, passed the udt or update delta time
   // the time since last update from the sever
   // and dt, time since last render
-  update(udt: number, dt: number, elapsedTime: number) {
+  update(udt: number, dt: number, elapsedTime: number): void {
     this.ssRenderer.update(dt);
 
     for (const playerShip of this.playerShips.values()) {
@@ -101,11 +101,11 @@ export class SSGameEngineClient {
     udt: number,
     elapsedTime: number,
     roomState: any
-  ) {
+  ): void {
     ctx.save();
 
     const thisPlayer = this.playerShips.get(this.playerSessionID);
-    if (thisPlayer) {
+    if (thisPlayer !== null && thisPlayer !== undefined) {
       ctx.translate(
         this.displayWidth / 2 - thisPlayer.rx,
         this.displayHeight / 2 - thisPlayer.ry
@@ -120,15 +120,18 @@ export class SSGameEngineClient {
     ctx.fillStyle = "rgb(255 255 255)";
     ctx.fillRect(0, 0, this.gameAreaWidth, this.gameAreaHeight);
 
-    if (this.gameGrid) {
+    // Check that we have recieved the grid from server before rendering
+    if (this.gameGrid !== null && this.gameGrid !== undefined) {
       this.drawGrid(ctx);
     }
 
     this.renderUpdateTimestamps.push(elapsedTime);
     if (this.renderUpdateTimestamps.length > 50) {
       const firstTimestamp = this.renderUpdateTimestamps.shift();
-      const secondsPassed = (elapsedTime - firstTimestamp) / 1000;
-      this.framesPerSecond = 50 / secondsPassed;
+      if (firstTimestamp !== undefined) {
+        const secondsPassed = (elapsedTime - firstTimestamp) / 1000;
+        this.framesPerSecond = 50 / secondsPassed;
+      }
     }
 
     for (const playerShip of this.playerShips.values()) {
@@ -152,9 +155,14 @@ export class SSGameEngineClient {
     }
 
     roomState.lasers.forEach((laser) => {
+      const lx: number = laser.x;
+      const ly: number = laser.y;
+      const lvx: number = laser.vx;
+      const lvy: number = laser.vy;
+
       this.ssRenderer.renderLaser(
-        laser.x + laser.vx * udt,
-        laser.y + laser.vy * udt,
+        lx + lvx * udt,
+        ly + lvy * udt,
         laser.direction,
         ctx
       );
@@ -174,7 +182,7 @@ export class SSGameEngineClient {
     }
   }
 
-  drawGrid(context: CanvasRenderingContext2D) {
+  drawGrid(context: CanvasRenderingContext2D): void {
     context.strokeStyle = "black"; // color of the walls
     context.lineWidth = 4; // width of the walls
 
@@ -185,7 +193,7 @@ export class SSGameEngineClient {
         const yPos = y * this.cellSize;
 
         // Draw top wall
-        if (cell & this.TOP) {
+        if ((cell & this.TOP) !== 0) {
           context.beginPath();
           context.moveTo(xPos, yPos);
           context.lineTo(xPos + this.cellSize, yPos);
@@ -193,7 +201,7 @@ export class SSGameEngineClient {
         }
 
         // Draw right wall
-        if (cell & this.RIGHT) {
+        if ((cell & this.RIGHT) !== 0) {
           context.beginPath();
           context.moveTo(xPos + this.cellSize, yPos);
           context.lineTo(xPos + this.cellSize, yPos + this.cellSize);
@@ -201,7 +209,7 @@ export class SSGameEngineClient {
         }
 
         // Draw bottom wall
-        if (cell & this.BOTTOM) {
+        if ((cell & this.BOTTOM) !== 0) {
           context.beginPath();
           context.moveTo(xPos + this.cellSize, yPos + this.cellSize);
           context.lineTo(xPos, yPos + this.cellSize);
@@ -209,7 +217,7 @@ export class SSGameEngineClient {
         }
 
         // Draw left wall
-        if (cell & this.LEFT) {
+        if ((cell & this.LEFT) !== 0) {
           context.beginPath();
           context.moveTo(xPos, yPos + this.cellSize);
           context.lineTo(xPos, yPos);
@@ -220,7 +228,7 @@ export class SSGameEngineClient {
   }
 
   // This function will render the scores.
-  renderScores(ctx: CanvasRenderingContext2D, roomState: any) {
+  renderScores(ctx: CanvasRenderingContext2D, roomState: any): void {
     const sortedPlayers = this.getSortedPlayers(roomState);
     ctx.fillStyle = "black";
     ctx.font = "16px Courier";
@@ -228,7 +236,7 @@ export class SSGameEngineClient {
 
     let maxWidth = 0;
     (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
-      const playerLabel = `${player.username}: ${player.score}`;
+      const playerLabel = String(player.username) + ": " + String(player.score);
       const textWidth = ctx.measureText(playerLabel).width;
       if (textWidth > maxWidth) {
         maxWidth = textWidth;
@@ -240,7 +248,7 @@ export class SSGameEngineClient {
 
     // Using sortedPlayers array for ordering
     (sortedPlayers as Array<[string, any]>).forEach(([id, player], index) => {
-      const playerLabel = `${player.username}: ${player.score}`;
+      const playerLabel = String(player.username) + ": " + String(player.score);
 
       ctx.fillStyle = "rgba(10, 10, 10, 1)";
       ctx.fillText(playerLabel, this.displayWidth - 10, 20 + index * 20);
@@ -262,21 +270,22 @@ export class SSGameEngineClient {
     });
   }
 
-  renderServerMetrics(ctx: CanvasRenderingContext2D, roomState: any) {
+  renderServerMetrics(ctx: CanvasRenderingContext2D, roomState: any): void {
     const fontSize = 14;
     ctx.font = `${fontSize}px Courier`;
     ctx.fillStyle = "blue";
     ctx.textAlign = "left";
 
     const metrics = [
-      `Clients Count....: ${roomState.currentClientsCount}`,
-      `Max Clients......: ${roomState.maxClientsCountLastMinute}`,
-      `High Score Player: ${roomState.highestScorePlayer}`,
-      `High Score.......: ${roomState.highestScore}`,
-      `Max fr per update: ${this.maxFramesBetweenState}`,
-      `Server LPS.......: ${roomState.gameUpdateCyclesPerSecond.toFixed(2)}`,
-      `Server UPS.......: ${this.updatesPerSecond.toFixed(2)}`,
-      `FPS..............: ${this.framesPerSecond.toFixed(2)}`,
+      "Clients Count....: " + String(roomState.currentClientsCount),
+      "Max Clients......: " + String(roomState.maxClientsCountLastMinute),
+      "High Score Player: " + String(roomState.highestScorePlayer),
+      "High Score.......: " + String(roomState.highestScore),
+      "Max fr per update: " + String(this.maxFramesBetweenState),
+      "Server LPS.......: " +
+        String(roomState.gameUpdateCyclesPerSecond.toFixed(2)),
+      "Server UPS.......: " + String(this.updatesPerSecond.toFixed(2)),
+      "FPS..............: " + String(this.framesPerSecond.toFixed(2)),
     ];
 
     const xOffset = 20; // Adjust this as needed
@@ -287,7 +296,7 @@ export class SSGameEngineClient {
     }
   }
 
-  renderInstructions(ctx: CanvasRenderingContext2D) {
+  renderInstructions(ctx: CanvasRenderingContext2D): void {
     const fontSize = 14;
     ctx.font = `${fontSize}px Courier`;
     ctx.fillStyle = "blue";
@@ -309,16 +318,20 @@ export class SSGameEngineClient {
     }
   }
 
-  getSortedPlayers(roomState: any) {
+  getSortedPlayers(roomState: any): unknown[] {
     const playersArray = Array.from(roomState.players.entries());
-    return playersArray.sort((a, b) => b[1].score - a[1].score);
+
+    // The 'as' structures lets the sort know the unkown passe to sort are arrays of objects from server
+    return playersArray.sort(
+      (a, b) => (b as any[])[1].score - (a as any[])[1].score
+    );
   }
 
-  setSessionID(newSessionID: string) {
+  setSessionID(newSessionID: string): void {
     this.playerSessionID = newSessionID;
   }
 
-  async updateFromServer(roomState: any) {
+  updateFromServer(roomState: any): void {
     // Update state received from the server
     // keeping track of the timestep and resetting the counter to check
     // frames without update
@@ -328,8 +341,10 @@ export class SSGameEngineClient {
     this.serverUpdateTimestamps.push(this.lastStateUpdate);
     if (this.serverUpdateTimestamps.length > 50) {
       const firstTimestamp = this.serverUpdateTimestamps.shift();
-      const secondsPassed = (this.lastStateUpdate - firstTimestamp) / 1000;
-      this.updatesPerSecond = 50 / secondsPassed;
+      if (firstTimestamp !== undefined) {
+        const secondsPassed = (this.lastStateUpdate - firstTimestamp) / 1000;
+        this.updatesPerSecond = 50 / secondsPassed;
+      }
     }
 
     // Create a set of all session IDs in the new state
