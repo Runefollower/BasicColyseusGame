@@ -2,7 +2,7 @@ import { type Client } from "colyseus";
 import { type GameState, Player, Laser } from "./GameState";
 import { logWithTimestamp } from "./ServerTools";
 
-const gridSize = 30;
+const gridSize = 3;
 
 const SimpleGameMetrics = {
   gridSize,
@@ -15,6 +15,7 @@ const SimpleGameMetrics = {
   laserSpeed: 0.4,
   playerRadius: 10,
   fireDelayInterval: 200,
+  laserDamage: 25,
 
   // Initialize the grid as an empty grid (no walls)
   grid: Array(gridSize)
@@ -341,7 +342,7 @@ export class SimpleGameLogic {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance <= SimpleGameMetrics.playerRadius) {
-          // Laser hit a ship, increment score, remove the ship and the laser
+          // Laser hit a ship
           const attacker = this.state.players.get(laser.ownerSessionId);
 
           // check that you did not shoot yourself
@@ -350,28 +351,43 @@ export class SimpleGameLogic {
             attacker !== undefined &&
             attacker !== player
           ) {
-            attacker.score += 1;
-
-            // Respawn the hit player in a random location
-            player.x = Math.random() * SimpleGameMetrics.playAreaWidth;
-            player.y = Math.random() * SimpleGameMetrics.playAreaHeight;
-            player.vx = 0.0;
-            player.vy = 0.0;
-            player.direction = Math.random() * 2 * Math.PI;
+            // apply damage
+            player.health -= SimpleGameMetrics.laserDamage;
 
             // Remove the laser
             this.state.lasers.splice(this.state.lasers.indexOf(laser), 1);
 
-            logWithTimestamp(
-              "PlayerHit    " +
-                String(attacker.username) +
-                " hit " +
-                String(player.username) +
-                ", " +
-                String(attacker.username) +
-                " score:" +
-                String(attacker.score)
-            );
+            // Was this a kill?
+            if (player.health <= 0) {
+              attacker.score += 1;
+
+              // Respawn the hit player in a random location
+              player.x = Math.random() * SimpleGameMetrics.playAreaWidth;
+              player.y = Math.random() * SimpleGameMetrics.playAreaHeight;
+              player.vx = 0.0;
+              player.vy = 0.0;
+              player.direction = Math.random() * 2 * Math.PI;
+              player.health = player.maxHealth;
+
+              logWithTimestamp(
+                "PlayerHit    " +
+                  String(attacker.username) +
+                  " killed " +
+                  String(player.username) +
+                  ", " +
+                  String(attacker.username) +
+                  " score:" +
+                  String(attacker.score)
+              );
+            } else {
+              logWithTimestamp(
+                "PlayerHit    " +
+                  String(attacker.username) +
+                  " hit " +
+                  String(player.username)
+              );
+            }
+
             break;
           }
         }

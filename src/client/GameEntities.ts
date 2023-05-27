@@ -13,6 +13,8 @@ abstract class GameObject {
   direction: number; // direction the object is facing
   vr: number; // rate of change of direction
   accel: number; // object's acceleration
+  health: number; // Current health of this object
+  maxHealth: number; // Maximum health of this object
 
   /**
    * Constructs a new GameObject.
@@ -33,6 +35,8 @@ abstract class GameObject {
     this.direction = direction;
     this.vr = vr;
     this.accel = accel;
+    this.health = 1;
+    this.maxHealth = 1;
   }
 
   /**

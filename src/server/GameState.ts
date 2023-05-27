@@ -34,6 +34,12 @@ export class Player extends Schema {
   @type("number")
   score: number;
 
+  @type("number")
+  health: number;
+
+  @type("number")
+  maxHealth: number;
+
   fireInterval: any;
 
   constructor(username: string, x: number, y: number) {
@@ -49,6 +55,8 @@ export class Player extends Schema {
     this.firing = false;
     this.lastFired = 0;
     this.score = 0;
+    this.health = 100;
+    this.maxHealth = 100;
   }
 }
 

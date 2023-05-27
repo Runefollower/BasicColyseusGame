@@ -102,7 +102,9 @@ export class SpaceShipRender {
     ctx: CanvasRenderingContext2D,
     name: string,
     displayName: boolean,
-    displayExhaust: boolean
+    displayExhaust: boolean,
+    health: number,
+    maxHealth: number
   ): void {
     ctx.save();
     ctx.translate(x, y);
@@ -148,10 +150,15 @@ export class SpaceShipRender {
 
     ctx.restore();
 
+    ctx.save();
+    ctx.translate(x, y);
+    this.renderHealthBar(-10, 10, health, maxHealth, ctx);
+    ctx.restore();
+
     if (displayName) {
       ctx.save();
       ctx.translate(x, y);
-      ctx.font = "10px Courier";
+      ctx.font = "12px Courier";
       ctx.textAlign = "right";
       ctx.fillStyle = color;
       const labelMetrics = ctx.measureText(name);
@@ -159,13 +166,31 @@ export class SpaceShipRender {
       ctx.fillText(
         name,
         labelMetrics.width / 2,
-        labelMetrics.actualBoundingBoxAscent + 10
+        labelMetrics.actualBoundingBoxAscent + 15
       );
       ctx.restore();
     }
 
     if (displayExhaust) {
       this.particleEmitter.render(ctx);
+    }
+  }
+
+  renderHealthBar(
+    x: number,
+    y: number,
+    health: number,
+    maxHealth: number,
+    ctx: CanvasRenderingContext2D
+  ): void {
+    if (health < maxHealth) {
+      const barWidth = 20;
+      const healthWidth = (health / maxHealth) * barWidth;
+      ctx.lineWidth = 1;
+      ctx.fillStyle = "red";
+      ctx.strokeStyle = "red";
+      ctx.strokeRect(x, y, barWidth, 3);
+      ctx.fillRect(x, y, healthWidth, 3);
     }
   }
 

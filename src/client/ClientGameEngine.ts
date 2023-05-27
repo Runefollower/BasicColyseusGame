@@ -150,7 +150,9 @@ export class SSGameEngineClient {
         ctx,
         playerShip.name,
         this.showPlayerLabels,
-        true
+        true,
+        playerShip.health,
+        playerShip.maxHealth
       );
     }
 
@@ -265,7 +267,9 @@ export class SSGameEngineClient {
         ctx,
         "",
         false,
-        false
+        false,
+        1,
+        1
       );
     });
   }
@@ -367,6 +371,8 @@ export class SSGameEngineClient {
         playerShip.firing = playerServerState.firing;
         playerShip.lastFired = playerServerState.lastFired;
         playerShip.score = playerServerState.score;
+        playerShip.health = playerServerState.health;
+        playerShip.maxHealth = playerServerState.maxHealth;
 
         // Remove the ID from the newStateIDs set
         newStateIDs.delete(sessionID);
