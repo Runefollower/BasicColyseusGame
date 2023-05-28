@@ -135,10 +135,15 @@ export class GameGridGenerator {
   /**
    * Generate a grid that is selected from the pre defined patterns
    *
+   * @param useImpossibleGrids Used for testing, uses grids that are mostly full
    * @returns The new grid
    */
-  generateGridFromPredefinedPatterns(): number[][] {
+  generateGridFromPredefinedPatterns(useImpossibleGrids: boolean): number[][] {
     // Create a grid
+    let sampleArray = preDefined10x10Grids;
+
+    if (useImpossibleGrids) sampleArray = preDefined10x10ImpossibleGrids;
+
     const grid = Array(this.gridSize)
       .fill(0)
       .map(() => Array(this.gridSize).fill(0));
@@ -156,9 +161,7 @@ export class GameGridGenerator {
       for (let gridX = 0; gridX < this.gridSize; gridX += patternSize) {
         // Select a random pre-defined pattern
         const pattern =
-          preDefined10x10Grids[
-            Math.floor(Math.random() * preDefined10x10Grids.length)
-          ];
+          sampleArray[Math.floor(Math.random() * sampleArray.length)];
 
         // Copy the pattern into the grid
         for (let patternY = 0; patternY < patternSize; patternY++) {
@@ -266,5 +269,34 @@ const preDefined10x10Grids = [
     [0, X, X, 0, 0, 0, 0, X, X, 0],
     [0, X, X, 0, 0, 0, 0, X, X, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
+];
+
+// createing these for testing spawn logic
+// the grids are mostly in accessable
+const preDefined10x10ImpossibleGrids = [
+  [
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, 0, 0, X, X, X],
+    [X, X, X, X, X, 0, 0, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+  ],
+  [
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, 0, 0, X, X, X, X, X, X, X],
+    [X, 0, 0, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
+    [X, X, X, X, X, X, X, X, X, X],
   ],
 ];
