@@ -266,6 +266,23 @@ export class SimpleGameLogic {
         );
         player.lastFired = elapsedTime;
       }
+
+      if (this.isInWalledCell(player.x, player.y)) {
+        // Not sure why this is happening...  you die and reset
+        // Respawn the hit player in a random location
+        const pos = this.generateSpawnPosition();
+        player.x = pos.x;
+        player.y = pos.y;
+        player.vx = 0.0;
+        player.vy = 0.0;
+        player.direction = Math.random() * 2 * Math.PI;
+        player.health = player.maxHealth;
+        console.log(
+          generateLogWithTimestamp(
+            "Player " + player.username + " punched into a wall"
+          )
+        );
+      }
     }); // end the player loop
 
     // Update laser positions and reduce remaining time
