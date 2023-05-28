@@ -67,7 +67,7 @@ export class GameGridGenerator {
       }
     }
 
-    return removeLockedWalls(grid);
+    return this.removeLockedWalls(grid);
   }
 
   /**

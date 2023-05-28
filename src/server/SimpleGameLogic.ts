@@ -35,10 +35,12 @@ export class SimpleGameLogic {
     this.state = state;
     this.gameUpdateTimestamps = [];
 
-    /* SimpleGameMetrics.grid = this.gridGen.generateRandomGrid();
-    SimpleGameMetrics.grid = this.gridGen.removeLockedWalls(
-      SimpleGameMetrics.grid
-    ); */
+    /*
+    // This would generate a random pattern of walls
+    SimpleGameMetrics.grid = this.gridGen.generateRandomGrid();
+    */
+
+    // Generate a grid from standard 10 X 10 blocks
     SimpleGameMetrics.grid = this.gridGen.generateGridFromPredefinedPatterns();
   }
 

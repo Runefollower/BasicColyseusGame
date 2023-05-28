@@ -225,11 +225,29 @@ export class SSGameEngineClient {
           context.lineTo(xPos, yPos);
           context.stroke();
         }
+
+        // Solid block
+        if (
+          cell & this.LEFT &&
+          cell & this.RIGHT &&
+          cell & this.TOP &&
+          cell & this.BOTTOM
+        ) {
+          context.fillStyle = "grey";
+          context.strokeStyle = "black";
+          context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
+        }
       }
     }
   }
 
-  // This function will render the scores.
+  /**
+   * Renders the score, lists players in order of current score
+   * and renders a simple graphic of the player ship.
+   *
+   * @param ctx Drawing context to render scores to
+   * @param roomState Current room state with players and scores
+   */
   renderScores(ctx: CanvasRenderingContext2D, roomState: any): void {
     const sortedPlayers = this.getSortedPlayers(roomState);
     ctx.fillStyle = "black";
