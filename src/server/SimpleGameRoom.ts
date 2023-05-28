@@ -53,7 +53,7 @@ export class SimpleGameRoom extends Room<GameState> {
 
     // Register the "move" message handler
     this.onMessage("input", (client, input) => {
-      this.gameLogic.handleInput(client, input);
+      this.gameLogic.handleInput(client.sessionId, input);
     });
 
     // Register the "joinGame" message handler

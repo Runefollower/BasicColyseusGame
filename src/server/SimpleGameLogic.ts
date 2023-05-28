@@ -2,6 +2,7 @@ import { type Client } from "colyseus";
 import { type GameState, Player, Laser } from "./GameState";
 import { generateLogWithTimestamp } from "./ServerTools";
 import { GameGridGenerator } from "./GameGridGenerator";
+import { ComputerPlayer } from "./ComputerPlayer";
 
 const gridSize = 30;
 const SimpleGameMetrics = {
@@ -33,10 +34,12 @@ export class SimpleGameLogic {
   state: GameState;
   gameUpdateTimestamps: number[];
   gridGen = new GameGridGenerator(SimpleGameMetrics.gridSize);
+  computerPlayers: ComputerPlayer[];
 
   constructor(state: GameState) {
     this.state = state;
     this.gameUpdateTimestamps = [];
+    this.computerPlayers = [];
 
     /*
     // This would generate a random pattern of walls
@@ -46,6 +49,28 @@ export class SimpleGameLogic {
     // Generate a grid from standard 10 X 10 blocks
     SimpleGameMetrics.grid =
       this.gridGen.generateGridFromPredefinedPatterns(false);
+
+    this.addNewComputerPlayer();
+  }
+
+  /**
+   * Add a new player controled by the computer to the game
+   */
+  addNewComputerPlayer(): void {
+    // Add the computer player
+    const computerPlayerPosition = this.generateSpawnPosition();
+    const computerSessionID = "PC 01";
+
+    const computerPlayerState = new Player(
+      "Computer",
+      computerPlayerPosition.x,
+      computerPlayerPosition.y
+    );
+    this.computerPlayers.push(
+      new ComputerPlayer(this, computerPlayerState, computerSessionID)
+    );
+
+    this.state.players.set(computerSessionID, computerPlayerState);
   }
 
   /**
@@ -63,9 +88,9 @@ export class SimpleGameLogic {
    * @param client The client generating input
    * @param input String message from client typically indicating key activity
    */
-  handleInput(client: Client, input: string): void {
-    if (this.state.players.has(client.sessionId)) {
-      const player = this.state.players.get(client.sessionId);
+  handleInput(sessionID: string, input: string): void {
+    if (this.state.players.has(sessionID)) {
+      const player = this.state.players.get(sessionID);
 
       switch (input) {
         case "w-down":
@@ -168,6 +193,11 @@ export class SimpleGameLogic {
    * @param elapsedTime Time since game start in millis
    */
   update(deltaTime: number, elapsedTime: number): void {
+    // update the computer managed players
+    this.computerPlayers.forEach((computerPlayer) => {
+      computerPlayer.update(deltaTime, elapsedTime);
+    });
+
     this.state.players.forEach((player, sessionId) => {
       // Compute proposed new position
       const newVx =
