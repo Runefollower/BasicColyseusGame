@@ -5,19 +5,20 @@ import serveIndex from "serve-index";
 
 import { Server, Room } from "colyseus";
 import type { Client } from "colyseus";
+import { WebSocketTransport } from "@colyseus/ws-transport";
 import { GameState } from "./GameState";
 import { SimpleGameLogic } from "./SimpleGameLogic";
-import { logWithTimestamp } from "./ServerTools";
+import { generateLogWithTimestamp } from "./ServerTools";
 
 let staticRoot = "../web";
 
 const devMode = process.argv.includes("-d");
 
 if (devMode) {
-  logWithTimestamp("Running in dev mode");
+  console.log(generateLogWithTimestamp("Running in dev mode"));
   staticRoot = "../../dist/web";
 } else {
-  logWithTimestamp("Running in prod mode");
+  console.log(generateLogWithTimestamp("Running in prod mode"));
 }
 
 const app = express();
@@ -26,8 +27,9 @@ app.use("/", serveIndex(path.join(__dirname, staticRoot), { icons: true }));
 app.use("/", express.static(path.join(__dirname, staticRoot)));
 
 const gameServer = new Server({
-  server: http.createServer(app),
-  // express: app,
+  transport: new WebSocketTransport({
+    server: http.createServer(app),
+  }),
 });
 
 export class SimpleGameRoom extends Room<GameState> {
@@ -45,7 +47,7 @@ export class SimpleGameRoom extends Room<GameState> {
   }
 
   async onCreate(): Promise<void> {
-    logWithTimestamp("CreateGameRoom");
+    console.log(generateLogWithTimestamp("CreateGameRoom"));
     this.setState(new GameState());
     this.gameLogic = new SimpleGameLogic(this.state);
 
@@ -56,11 +58,13 @@ export class SimpleGameRoom extends Room<GameState> {
 
     // Register the "joinGame" message handler
     this.onMessage("joinGame", (client, input) => {
-      logWithTimestamp(
-        "ClientJoined ClientID:" +
-          String(client.sessionId) +
-          " Username:" +
-          String(input)
+      console.log(
+        generateLogWithTimestamp(
+          "ClientJoined ClientID:" +
+            String(client.sessionId) +
+            " Username:" +
+            String(input)
+        )
       );
       this.gameLogic.addPlayer(client, input);
     });
@@ -72,14 +76,22 @@ export class SimpleGameRoom extends Room<GameState> {
   }
 
   async onJoin(client: Client): Promise<void> {
-    logWithTimestamp("ClientConnected ClientID:" + String(client.sessionId));
+    console.log(
+      generateLogWithTimestamp(
+        "ClientConnected ClientID:" + String(client.sessionId)
+      )
+    );
 
     // Send initialization data to the client
     client.send("init", this.gameLogic.getInitializationData());
   }
 
   onLeave(client: Client): void {
-    logWithTimestamp("ClientLeft   ClientID:" + String(client.sessionId));
+    console.log(
+      generateLogWithTimestamp(
+        "ClientLeft   ClientID:" + String(client.sessionId)
+      )
+    );
     this.gameLogic.removePlayer(client);
   }
 
@@ -91,15 +103,19 @@ export class SimpleGameRoom extends Room<GameState> {
 gameServer.define("game", SimpleGameRoom);
 gameServer.listen(3000).then(
   function (_value) {
-    logWithTimestamp("Bound to port");
+    console.log(generateLogWithTimestamp("Bound to port"));
   },
   function (error) {
-    logWithTimestamp("Failed to bind to port:" + String(error));
+    console.log(
+      generateLogWithTimestamp("Failed to bind to port:" + String(error))
+    );
   }
 );
 
 if (devMode) {
-  logWithTimestamp(
-    "The game is now running at http://localhost:3000/index.html"
+  console.log(
+    generateLogWithTimestamp(
+      "The game is now running at http://localhost:3000/index.html"
+    )
   );
 }

@@ -1,6 +1,6 @@
 import { type Client } from "colyseus";
 import { type GameState, Player, Laser } from "./GameState";
-import { logWithTimestamp } from "./ServerTools";
+import { generateLogWithTimestamp } from "./ServerTools";
 
 const gridSize = 3;
 
@@ -369,22 +369,26 @@ export class SimpleGameLogic {
               player.direction = Math.random() * 2 * Math.PI;
               player.health = player.maxHealth;
 
-              logWithTimestamp(
-                "PlayerHit    " +
-                  String(attacker.username) +
-                  " killed " +
-                  String(player.username) +
-                  ", " +
-                  String(attacker.username) +
-                  " score:" +
-                  String(attacker.score)
+              console.log(
+                generateLogWithTimestamp(
+                  "PlayerHit    " +
+                    String(attacker.username) +
+                    " killed " +
+                    String(player.username) +
+                    ", " +
+                    String(attacker.username) +
+                    " score:" +
+                    String(attacker.score)
+                )
               );
             } else {
-              logWithTimestamp(
-                "PlayerHit    " +
-                  String(attacker.username) +
-                  " hit " +
-                  String(player.username)
+              console.log(
+                generateLogWithTimestamp(
+                  "PlayerHit    " +
+                    String(attacker.username) +
+                    " hit " +
+                    String(player.username)
+                )
               );
             }
 
@@ -440,14 +444,16 @@ export class SimpleGameLogic {
     if (elapsedTime > nextLogMetricsUpdate && this.state.players.size > 0) {
       nextLogMetricsUpdate = elapsedTime + 60000;
 
-      logWithTimestamp(
-        `Clients Count: ${this.state.currentClientsCount}, Max Clients: ${
-          this.state.maxClientsCountLastMinute
-        }, UPS: ${this.state.gameUpdateCyclesPerSecond.toFixed(
-          2
-        )}, High Score: ${this.state.highestScorePlayer} ${
-          this.state.highestScore
-        }`
+      console.log(
+        generateLogWithTimestamp(
+          `Clients Count: ${this.state.currentClientsCount}, Max Clients: ${
+            this.state.maxClientsCountLastMinute
+          }, UPS: ${this.state.gameUpdateCyclesPerSecond.toFixed(
+            2
+          )}, High Score: ${this.state.highestScorePlayer} ${
+            this.state.highestScore
+          }`
+        )
       );
     }
   }

@@ -2,7 +2,9 @@
  * Server side tools
  */
 
-export function logWithTimestamp(...messages): void {
+export function generateLogWithTimestamp(...messages: any[]): string {
   const timestamp = new Date().toISOString();
-  console.log(timestamp, ...messages);
+  // Use the Array.prototype.map method to convert all elements to strings
+  // Then use the Array.prototype.join method to concatenate all the strings
+  return timestamp + " " + messages.map(String).join("");
 }
