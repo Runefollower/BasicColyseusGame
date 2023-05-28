@@ -67,7 +67,7 @@ export class GameGridGenerator {
       }
     }
 
-    return grid;
+    return removeLockedWalls(grid);
   }
 
   /**
@@ -131,4 +131,140 @@ export class GameGridGenerator {
     }
     return grid;
   }
+
+  /**
+   * Generate a grid that is selected from the pre defined patterns
+   *
+   * @returns The new grid
+   */
+  generateGridFromPredefinedPatterns(): number[][] {
+    // Create a grid
+    const grid = Array(this.gridSize)
+      .fill(0)
+      .map(() => Array(this.gridSize).fill(0));
+
+    // Size of the pre-defined patterns
+    const patternSize = 10;
+
+    // Ensure gridSize is a multiple of patternSize
+    if (this.gridSize % patternSize !== 0) {
+      throw new Error("Grid size must be a multiple of " + String(patternSize));
+    }
+
+    // For each pattern-sized block in the grid
+    for (let gridY = 0; gridY < this.gridSize; gridY += patternSize) {
+      for (let gridX = 0; gridX < this.gridSize; gridX += patternSize) {
+        // Select a random pre-defined pattern
+        const pattern =
+          preDefined10x10Grids[
+            Math.floor(Math.random() * preDefined10x10Grids.length)
+          ];
+
+        // Copy the pattern into the grid
+        for (let patternY = 0; patternY < patternSize; patternY++) {
+          for (let patternX = 0; patternX < patternSize; patternX++) {
+            grid[gridY + patternY][gridX + patternX] =
+              pattern[patternY][patternX];
+          }
+        }
+      }
+    }
+
+    this.populateOuterWalls(grid);
+    this.matchWalls(grid);
+    return grid;
+  }
+
+  /**
+   * This will ensure all outside walls are populated
+   *
+   * @param grid The grid now with all exterior walls populated
+   */
+  populateOuterWalls(grid: number[][]): void {
+    // Set top and bottom walls
+    for (let x = 0; x < grid.length; x++) {
+      // Top walls (set the first bit)
+      grid[0][x] |= this.wallMask.T;
+      // Bottom walls (set the third bit)
+      grid[grid.length - 1][x] |= this.wallMask.B;
+    }
+
+    // Set left and right walls
+    for (let y = 0; y < grid.length; y++) {
+      // Left walls (set the fourth bit)
+      grid[y][0] |= this.wallMask.L;
+      // Right walls (set the second bit)
+      grid[y][grid.length - 1] |= this.wallMask.R;
+    }
+  }
+
+  /**
+   * Ensure that all walls are matched.  So if there is a wall on the left, the
+   * grid on the left should have a matching wall on the right
+   *
+   * @param grid The grid we are checking
+   */
+  matchWalls(grid: number[][]): void {
+    // Traverse all cells in the grid
+    for (let y = 0; y < grid.length; y++) {
+      for (let x = 0; x < grid[y].length; x++) {
+        // Check right neighbor, if exists
+        if (x < grid[y].length - 1) {
+          // If current cell has a right wall, ensure the neighbor has a left wall
+          if (grid[y][x] & this.wallMask.R) {
+            grid[y][x + 1] |= this.wallMask.L;
+          }
+          // If neighbor has a left wall, ensure the current cell has a right wall
+          if (grid[y][x + 1] & this.wallMask.L) {
+            grid[y][x] |= this.wallMask.R;
+          }
+        }
+
+        // Check bottom neighbor, if exists
+        if (y < grid.length - 1) {
+          // If current cell has a bottom wall, ensure the neighbor has a top wall
+          if (grid[y][x] & this.wallMask.B) {
+            grid[y + 1][x] |= this.wallMask.T;
+          }
+          // If neighbor has a top wall, ensure the current cell has a bottom wall
+          if (grid[y + 1][x] & this.wallMask.T) {
+            grid[y][x] |= this.wallMask.B;
+          }
+        }
+      }
+    }
+  }
 }
+
+/**
+ * Defining standard patterns that can be selected to
+ * build a full grid.  X here represents a block
+ * with walls on all four sides
+ */
+const X = 0b1111;
+const preDefined10x10Grids = [
+  [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, X, X, X, 0, X, X, X, X, 0],
+    [0, X, 0, 0, 0, 0, 0, 0, X, 0],
+    [0, X, 0, 0, 0, 0, 0, 0, X, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, X, 0],
+    [0, X, 0, 0, 0, 0, 0, 0, X, 0],
+    [0, X, 0, 0, 0, 0, 0, 0, X, 0],
+    [0, X, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, X, X, 0, X, X, X, X, X, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
+  [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, X, X, 0, 0, 0, 0, X, X, 0],
+    [0, X, X, 0, 0, 0, 0, X, X, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, X, X, 0, 0, 0, 0, X, X, 0],
+    [0, X, X, 0, 0, 0, 0, X, X, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
+];

@@ -35,10 +35,11 @@ export class SimpleGameLogic {
     this.state = state;
     this.gameUpdateTimestamps = [];
 
-    SimpleGameMetrics.grid = this.gridGen.generateRandomGrid();
+    /* SimpleGameMetrics.grid = this.gridGen.generateRandomGrid();
     SimpleGameMetrics.grid = this.gridGen.removeLockedWalls(
       SimpleGameMetrics.grid
-    );
+    ); */
+    SimpleGameMetrics.grid = this.gridGen.generateGridFromPredefinedPatterns();
   }
 
   getInitializationData(): any {
@@ -269,7 +270,7 @@ export class SimpleGameLogic {
 
               console.log(
                 generateLogWithTimestamp(
-                  "PlayerHit    " +
+                  "PlayerHit " +
                     String(attacker.username) +
                     " killed " +
                     String(player.username) +
@@ -282,7 +283,7 @@ export class SimpleGameLogic {
             } else {
               console.log(
                 generateLogWithTimestamp(
-                  "PlayerHit    " +
+                  "PlayerHit " +
                     String(attacker.username) +
                     " hit " +
                     String(player.username)
