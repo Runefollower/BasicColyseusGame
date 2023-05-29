@@ -40,6 +40,9 @@ export class Player extends Schema {
   @type("number")
   maxHealth: number;
 
+  @type("string")
+  shipType: string;
+
   fireInterval: any;
 
   constructor(username: string, x: number, y: number) {
@@ -57,6 +60,7 @@ export class Player extends Schema {
     this.score = 0;
     this.health = 100;
     this.maxHealth = 100;
+    this.shipType = "SpaceShip";
   }
 }
 

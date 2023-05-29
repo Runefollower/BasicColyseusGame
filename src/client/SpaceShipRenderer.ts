@@ -104,13 +104,11 @@ class ParticleEmitter {
 export class SpaceShipRender {
   particleEmitter: ParticleEmitter;
   laserLength: number;
-  shipDesignsMap: Map<string, ShipType> | null;
+  shipDesignsMap: Map<string, ShipType> = new Map<string, ShipType>();
 
   constructor() {
     this.particleEmitter = new ParticleEmitter();
     this.laserLength = 10;
-
-    this.shipDesignsMap = null;
   }
 
   setShipDesigns(newDesigns: any): void {
@@ -141,34 +139,65 @@ export class SpaceShipRender {
     displayName: boolean,
     displayExhaust: boolean,
     health: number,
-    maxHealth: number
+    maxHealth: number,
+    shipType: string
   ): void {
+    const sType = this.shipDesignsMap.get(shipType);
+    if (sType === undefined) throw Error("Ship type not found :" + shipType);
+
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(direction);
 
     // Render the ship
-    ctx.beginPath();
-    ctx.moveTo(10, 0); // Forward point of the triangle
-    ctx.lineTo(-6, 7); // Bottom right point of the triangle
-    ctx.lineTo(-3, 0); // Center of engine
-    ctx.lineTo(-6, -7); // Bottom left point of the triangle
-    ctx.closePath();
+    sType.shapes.forEach((shape) => {
+      ctx.beginPath();
+      if (shape.type === "polygon") {
+        ctx.moveTo(shape.points[0].x, shape.points[0].y); // Move to the first point
+        for (let i = 1; i < shape.points.length; i++) {
+          ctx.lineTo(shape.points[i].x, shape.points[i].y); // Draw lines to subsequent points
+        }
+        ctx.closePath(); // Close the path
+      } else if (shape.type === "circle") {
+        ctx.arc(shape.center.x, shape.center.y, shape.radius, 0, 2 * Math.PI);
+      }
 
-    ctx.fillStyle = color;
-    ctx.fill();
+      if (shape.fillColor === "playerColor") {
+        ctx.fillStyle = this.selectFillColor(color);
+      } else {
+        ctx.fillStyle = shape.fillColor;
+      }
+
+      if (shape.strokeColor === "playerColor") {
+        ctx.strokeStyle = this.selectStrokeColor(color);
+      } else {
+        ctx.strokeStyle = shape.strokeColor;
+      }
+      ctx.lineWidth = shape.lineWidth;
+
+      ctx.fill();
+      ctx.stroke();
+    });
 
     // Render a flame when accelerating
-    if (accel > 0) {
-      ctx.beginPath();
-      ctx.moveTo(-4, 0);
-      ctx.lineTo(-8, 5);
-      ctx.lineTo(-17, 0);
-      ctx.lineTo(-8, -5);
-      ctx.closePath();
-
-      ctx.fillStyle = "red";
-      ctx.fill();
+    if (accel > 0 && sType.hasFlame) {
+      sType.flames.forEach((shape) => {
+        ctx.beginPath();
+        if (shape.type === "polygon") {
+          ctx.moveTo(shape.points[0].x, shape.points[0].y); // Move to the first point
+          for (let i = 1; i < shape.points.length; i++) {
+            ctx.lineTo(shape.points[i].x, shape.points[i].y); // Draw lines to subsequent points
+          }
+          ctx.closePath(); // Close the path
+        } else if (shape.type === "circle") {
+          ctx.arc(shape.center.x, shape.center.y, shape.radius, 0, 2 * Math.PI);
+        }
+        ctx.fillStyle = shape.fillColor;
+        ctx.strokeStyle = shape.strokeColor;
+        ctx.lineWidth = shape.lineWidth;
+        ctx.fill();
+        ctx.stroke();
+      });
 
       if (displayExhaust) {
         // Emit smoke particles
@@ -210,6 +239,26 @@ export class SpaceShipRender {
 
     if (displayExhaust) {
       this.particleEmitter.render(ctx);
+    }
+  }
+
+  selectFillColor(color: string): string {
+    if (color === "blue") {
+      return "rgb(118, 141, 252)";
+    } else if (color === "red") {
+      return "rgb(245, 131, 135)";
+    } else {
+      return color;
+    }
+  }
+
+  selectStrokeColor(color: string): string {
+    if (color === "blue") {
+      return "rgb(88, 105, 189)";
+    } else if (color === "red") {
+      return "rgb(180, 58, 63)";
+    } else {
+      return color;
     }
   }
 

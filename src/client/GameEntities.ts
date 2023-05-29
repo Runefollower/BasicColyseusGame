@@ -63,6 +63,7 @@ export class PlayerShip extends GameObject {
   lastFired: number; // the time the ship last fired
   score: number; // player's score
   sessionId: string; // unique session ID for the player
+  shipType: string;
 
   /**
    * Constructs a new PlayerShip.
@@ -87,6 +88,7 @@ export class PlayerShip extends GameObject {
     this.lastFired = lastFired;
     this.score = score;
     this.sessionId = sessionId;
+    this.shipType = "SpaceShip";
   }
 
   /**

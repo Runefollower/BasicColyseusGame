@@ -1,5 +1,4 @@
 import { SSGameEngineClient } from "./ClientGameEngine";
-import type { ShipType } from "../server/ShipDesignTypes";
 import * as Colyseus from "colyseus.js";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -112,6 +111,10 @@ async function connectToServer(): Promise<string> {
         case "i":
         case "I":
           gameEngine.showInstructions = !gameEngine.showInstructions;
+          break;
+        case "t":
+        case "T":
+          room.send("input", "change-type");
           break;
       }
     }

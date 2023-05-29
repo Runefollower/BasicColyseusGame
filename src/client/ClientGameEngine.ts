@@ -152,7 +152,8 @@ export class SSGameEngineClient {
         this.showPlayerLabels,
         true,
         playerShip.health,
-        playerShip.maxHealth
+        playerShip.maxHealth,
+        playerShip.shipType
       );
     }
 
@@ -287,7 +288,8 @@ export class SSGameEngineClient {
         false,
         false,
         1,
-        1
+        1,
+        player.shipType
       );
     });
   }
@@ -330,6 +332,7 @@ export class SSGameEngineClient {
       "L to toggle labels",
       "K to toggle metrics",
       "I to toggle these instructions",
+      "T to toggle the ship type",
     ];
 
     const xOffset = 20; // Adjust this as needed
@@ -391,6 +394,7 @@ export class SSGameEngineClient {
         playerShip.score = playerServerState.score;
         playerShip.health = playerServerState.health;
         playerShip.maxHealth = playerServerState.maxHealth;
+        playerShip.shipType = playerServerState.shipType;
 
         // Remove the ID from the newStateIDs set
         newStateIDs.delete(sessionID);

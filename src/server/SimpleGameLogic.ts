@@ -3,7 +3,7 @@ import { type GameState, Player, Laser } from "./GameState";
 import { generateLogWithTimestamp } from "./ServerTools";
 import { GameGridGenerator } from "./GameGridGenerator";
 import { ComputerPlayer } from "./ComputerPlayer";
-import { ShipDesigns } from "./ShipDesigns";
+import { ShipDesigns, ShipDesignsMap } from "./ShipDesigns";
 
 const gridSize = 30;
 const SimpleGameMetrics = {
@@ -15,7 +15,6 @@ const SimpleGameMetrics = {
   angularAcceleration: 0.005,
   drag: -0.01,
   laserSpeed: 0.4,
-  playerRadius: 10,
   fireDelayInterval: 200,
   laserDamage: 25,
   ShipDesigns,
@@ -121,6 +120,9 @@ export class SimpleGameLogic {
         case "fire-up":
           player.firing = false;
           break;
+        case "change-type":
+          if (player.shipType === "SpaceShip") player.shipType = "Tank";
+          else if (player.shipType === "Tank") player.shipType = "SpaceShip";
       }
     }
   }
@@ -134,10 +136,10 @@ export class SimpleGameLogic {
   addPlayer(client: Client, username: string): void {
     const pos = this.generateSpawnPosition();
 
-    this.state.players.set(
-      client.sessionId,
-      new Player(username, pos.x, pos.y)
-    );
+    const newPlayer = new Player(username, pos.x, pos.y);
+    newPlayer.shipType = "SpaceShip";
+
+    this.state.players.set(client.sessionId, newPlayer);
   }
 
   /**
@@ -201,6 +203,18 @@ export class SimpleGameLogic {
     });
 
     this.state.players.forEach((player, sessionId) => {
+      const playerType = ShipDesignsMap.get(player.shipType);
+      if (playerType === undefined) {
+        console.error(
+          generateLogWithTimestamp(
+            "Unknown ship type: " + player.shipType + " for " + player.username
+          )
+        );
+        return;
+      }
+
+      const playerRadius = playerType.collisionRadius;
+
       // Compute proposed new position
       const newVx =
         player.vx +
@@ -221,7 +235,7 @@ export class SimpleGameLogic {
         newY,
         newVx,
         newVy,
-        SimpleGameMetrics.playerRadius
+        playerRadius
       );
 
       // Update player position and velocity
@@ -254,10 +268,8 @@ export class SimpleGameLogic {
       ) {
         this.state.lasers.push(
           new Laser(
-            player.x +
-              Math.cos(player.direction) * SimpleGameMetrics.playerRadius,
-            player.y +
-              Math.sin(player.direction) * SimpleGameMetrics.playerRadius,
+            player.x + Math.cos(player.direction) * playerRadius,
+            player.y + Math.sin(player.direction) * playerRadius,
             Math.cos(player.direction) * SimpleGameMetrics.laserSpeed +
               player.vx,
             Math.sin(player.direction) * SimpleGameMetrics.laserSpeed +
@@ -315,11 +327,25 @@ export class SimpleGameLogic {
     // Check for collisions between lasers and ships
     for (const laser of this.state.lasers) {
       for (const player of this.state.players.values()) {
+        const playerType = ShipDesignsMap.get(player.shipType);
+        if (playerType === undefined) {
+          console.error(
+            generateLogWithTimestamp(
+              "Unknown ship type: " +
+                player.shipType +
+                " for " +
+                player.username
+            )
+          );
+          break;
+        }
+
+        const playerRadius = playerType.collisionRadius;
         const dx = laser.x - player.x;
         const dy = laser.y - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance <= SimpleGameMetrics.playerRadius) {
+        if (distance <= playerRadius) {
           // Laser hit a ship
           const attacker = this.state.players.get(laser.ownerSessionId);
 
