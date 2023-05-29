@@ -1,4 +1,5 @@
 import { SSGameEngineClient } from "./ClientGameEngine";
+import type { ShipType } from "../server/ShipDesignTypes";
 import * as Colyseus from "colyseus.js";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -52,6 +53,8 @@ async function connectToServer(): Promise<string> {
   room.onMessage("init", (message) => {
     // retrieve initialization metrics
     gameMetrics = message;
+
+    gameEngine.ssRenderer.setShipDesigns(gameMetrics.ShipDesigns);
 
     // Resize canvas to match game area dimensions
     canvas.width = gameDiv.clientWidth;

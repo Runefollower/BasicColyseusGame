@@ -1,3 +1,4 @@
+import type { ShipType } from "../server/ShipDesignTypes";
 
 /**
  * Smoke particles for the smoke effect
@@ -20,7 +21,17 @@ class Particle {
     this.alpha = 1;
   }
 
-  update(dt: number):void {
+  /**
+   * Updates the particle's properties according to the given time interval.
+   *
+   * The velocity of the particle is slowly reduced over time.
+   * The position is then updated based on the current velocity and time interval.
+   * The particle's life is also reduced by the time interval.
+   * Finally, the particle's transparency (alpha) is updated to reflect its remaining life.
+   *
+   * @param dt - The elapsed time since the last update in milliseconds.
+   */
+  update(dt: number): void {
     this.vx -= 0.001 * this.vx * dt;
     this.vy -= 0.001 * this.vy * dt;
     this.x += this.vx * dt;
@@ -29,15 +40,15 @@ class Particle {
     this.alpha = Math.max(0, this.life / 1000);
   }
 
-  /** 
- * Renders the particle on a 2D canvas.
- *
- * A circle is drawn at the particle's position, with a diameter of 2 units.
- * The fill color is set to be a semi-transparent gray, with transparency level 
- * set according to the particle's alpha value.
- *
- * @param ctx - The rendering context of the canvas.
- */
+  /**
+   * Renders the particle on a 2D canvas.
+   *
+   * A circle is drawn at the particle's position, with a diameter of 2 units.
+   * The fill color is set to be a semi-transparent gray, with transparency level
+   * set according to the particle's alpha value.
+   *
+   * @param ctx - The rendering context of the canvas.
+   */
   render(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = `rgba(128, 128, 128, ${this.alpha})`;
     ctx.beginPath();
@@ -46,10 +57,9 @@ class Particle {
   }
 }
 
-
 /**
- * ParticleEmitter is used for the smoke effect and will manage 
- * all particles being rendered 
+ * ParticleEmitter is used for the smoke effect and will manage
+ * all particles being rendered
  */
 class ParticleEmitter {
   particles: Particle[];
@@ -94,10 +104,24 @@ class ParticleEmitter {
 export class SpaceShipRender {
   particleEmitter: ParticleEmitter;
   laserLength: number;
+  shipDesignsMap: Map<string, ShipType> | null;
 
   constructor() {
     this.particleEmitter = new ParticleEmitter();
     this.laserLength = 10;
+
+    this.shipDesignsMap = null;
+  }
+
+  setShipDesigns(newDesigns: any): void {
+    const shipDesignsArray: ShipType[] = newDesigns;
+    this.shipDesignsMap = shipDesignsArray.reduce(
+      (map, shipType) => map.set(shipType.id, shipType),
+      new Map<string, ShipType>()
+    );
+
+    const ss = this.shipDesignsMap.get("SpaceShip");
+    if (ss !== undefined) console.log(ss.id);
   }
 
   update(dt: number): void {

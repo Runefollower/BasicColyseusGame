@@ -3,6 +3,7 @@ import { type GameState, Player, Laser } from "./GameState";
 import { generateLogWithTimestamp } from "./ServerTools";
 import { GameGridGenerator } from "./GameGridGenerator";
 import { ComputerPlayer } from "./ComputerPlayer";
+import { ShipDesigns } from "./ShipDesigns";
 
 const gridSize = 30;
 const SimpleGameMetrics = {
@@ -17,6 +18,7 @@ const SimpleGameMetrics = {
   playerRadius: 10,
   fireDelayInterval: 200,
   laserDamage: 25,
+  ShipDesigns,
   grid: [
     [0, 0],
     [0, 0],
