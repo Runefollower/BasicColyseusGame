@@ -1,8 +1,7 @@
-/*
- * Smoke particles, the individual particles
- * and the particle emitter for the smoke particle effect
- */
 
+/**
+ * Smoke particles for the smoke effect
+ */
 class Particle {
   x: number;
   y: number;
@@ -21,7 +20,7 @@ class Particle {
     this.alpha = 1;
   }
 
-  update(dt: number): void {
+  update(dt: number):void {
     this.vx -= 0.001 * this.vx * dt;
     this.vy -= 0.001 * this.vy * dt;
     this.x += this.vx * dt;
@@ -30,6 +29,15 @@ class Particle {
     this.alpha = Math.max(0, this.life / 1000);
   }
 
+  /** 
+ * Renders the particle on a 2D canvas.
+ *
+ * A circle is drawn at the particle's position, with a diameter of 2 units.
+ * The fill color is set to be a semi-transparent gray, with transparency level 
+ * set according to the particle's alpha value.
+ *
+ * @param ctx - The rendering context of the canvas.
+ */
   render(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = `rgba(128, 128, 128, ${this.alpha})`;
     ctx.beginPath();
@@ -38,6 +46,11 @@ class Particle {
   }
 }
 
+
+/**
+ * ParticleEmitter is used for the smoke effect and will manage 
+ * all particles being rendered 
+ */
 class ParticleEmitter {
   particles: Particle[];
 
