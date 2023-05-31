@@ -1,5 +1,10 @@
 import type { ShipType } from "./ShipDesignTypes";
 
+export const controlTypes = {
+  rocketShip: "RocketShip",
+  tank: "Tank",
+};
+
 // Instantiate the SpaceShip design
 const SpaceShip: ShipType = {
   id: "SpaceShip",
@@ -32,7 +37,7 @@ const SpaceShip: ShipType = {
     },
   ],
   firesLasers: true,
-  controlType: "TurnAndAccelerate",
+  controlType: controlTypes.rocketShip,
   hasFlame: true,
   collisionRadius: 10,
 };
@@ -64,7 +69,7 @@ const Tank: ShipType = {
   ],
   flames: [],
   firesLasers: true,
-  controlType: "TurnAndAccelerate",
+  controlType: controlTypes.tank,
   hasFlame: false,
   collisionRadius: 20,
 };

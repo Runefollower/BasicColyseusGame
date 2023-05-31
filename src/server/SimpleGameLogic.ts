@@ -3,7 +3,7 @@ import { type GameState, Player, Laser } from "./GameState";
 import { generateLogWithTimestamp } from "./ServerTools";
 import { GameGridGenerator } from "./GameGridGenerator";
 import { ComputerPlayer } from "./ComputerPlayer";
-import { ShipDesigns, ShipDesignsMap } from "./ShipDesigns";
+import { ShipDesigns, ShipDesignsMap, controlTypes } from "./ShipDesigns";
 
 const gridSize = 30;
 const SimpleGameMetrics = {
@@ -14,6 +14,7 @@ const SimpleGameMetrics = {
   acceleration: 0.01,
   angularAcceleration: 0.005,
   drag: -0.01,
+  tankSpeed: 0.1,
   laserSpeed: 0.4,
   fireDelayInterval: 200,
   laserDamage: 25,
@@ -93,26 +94,83 @@ export class SimpleGameLogic {
     if (this.state.players.has(sessionID)) {
       const player = this.state.players.get(sessionID);
 
+      const playerType = ShipDesignsMap.get(player.shipType);
+      if (playerType === undefined) {
+        console.error(
+          generateLogWithTimestamp(
+            "Player " +
+              sessionID +
+              " name: " +
+              player.username +
+              " had unknown type " +
+              player.shipType
+          )
+        );
+        return;
+      }
+
       switch (input) {
         case "w-down":
-          player.accel = SimpleGameMetrics.acceleration;
-          break;
-        case "s-down":
-          player.accel = -1 * SimpleGameMetrics.acceleration;
-          break;
-        case "a-down":
-          player.vr = -1 * SimpleGameMetrics.angularAcceleration;
-          break;
-        case "d-down":
-          player.vr = SimpleGameMetrics.angularAcceleration;
-          break;
-        case "a-up":
-        case "d-up":
-          player.vr = 0;
+          if (playerType.controlType === controlTypes.rocketShip) {
+            player.accel = SimpleGameMetrics.acceleration;
+          } else if (playerType.controlType === controlTypes.tank) {
+            player.vy = -SimpleGameMetrics.tankSpeed;
+          }
           break;
         case "w-up":
+          if (playerType.controlType === controlTypes.rocketShip) {
+            player.accel = 0;
+          } else if (playerType.controlType === controlTypes.tank) {
+            player.vy = 0;
+          }
+          break;
+        case "s-down":
+          /*
+          if (playerType.controlType === controlTypes.rocketShip) {
+            player.accel -= SimpleGameMetrics.acceleration;
+          } 
+          */
+          if (playerType.controlType === controlTypes.tank) {
+            player.vy = SimpleGameMetrics.tankSpeed;
+          }
+          break;
         case "s-up":
-          player.accel = 0;
+          /*
+          if (playerType.controlType === controlTypes.rocketShip) {
+            player.accel += SimpleGameMetrics.acceleration;
+          }  
+          */
+          if (playerType.controlType === controlTypes.tank) {
+            player.vy = 0;
+          }
+          break;
+        case "a-down":
+          if (playerType.controlType === controlTypes.rocketShip) {
+            player.vr = -SimpleGameMetrics.angularAcceleration;
+          } else if (playerType.controlType === controlTypes.tank) {
+            player.vx = -SimpleGameMetrics.tankSpeed;
+          }
+          break;
+        case "a-up":
+          if (playerType.controlType === controlTypes.rocketShip) {
+            player.vr = 0;
+          } else if (playerType.controlType === controlTypes.tank) {
+            player.vx = 0;
+          }
+          break;
+        case "d-down":
+          if (playerType.controlType === controlTypes.rocketShip) {
+            player.vr = SimpleGameMetrics.angularAcceleration;
+          } else if (playerType.controlType === controlTypes.tank) {
+            player.vx = SimpleGameMetrics.tankSpeed;
+          }
+          break;
+        case "d-up":
+          if (playerType.controlType === controlTypes.rocketShip) {
+            player.vr = 0;
+          } else if (playerType.controlType === controlTypes.tank) {
+            player.vx = 0;
+          }
           break;
         case "fire-down":
           player.firing = true;
@@ -121,8 +179,32 @@ export class SimpleGameLogic {
           player.firing = false;
           break;
         case "change-type":
-          if (player.shipType === "SpaceShip") player.shipType = "Tank";
-          else if (player.shipType === "Tank") player.shipType = "SpaceShip";
+          if (player.shipType === "SpaceShip") {
+            player.shipType = "Tank";
+            player.vx = 0;
+            player.vy = 0;
+            player.accel = 0;
+          } else if (player.shipType === "Tank") {
+            player.shipType = "SpaceShip";
+            player.vx = 0;
+            player.vy = 0;
+            player.accel = 0;
+          }
+          break;
+      }
+    }
+  }
+
+  mouseDirection(sessionID: string, direction: number): void {
+    if (this.state.players.has(sessionID)) {
+      const player = this.state.players.get(sessionID);
+
+      const playerType = ShipDesignsMap.get(player.shipType);
+      if (
+        playerType !== undefined &&
+        playerType.controlType === controlTypes.tank
+      ) {
+        player.direction = direction;
       }
     }
   }
@@ -213,17 +295,22 @@ export class SimpleGameLogic {
         return;
       }
 
+      // Player Radius is defined in type
       const playerRadius = playerType.collisionRadius;
+
+      // Tank control types have no drag
+      let drag = SimpleGameMetrics.drag;
+      if (playerType.controlType === controlTypes.tank) drag = 0;
 
       // Compute proposed new position
       const newVx =
         player.vx +
         Math.cos(player.direction) * player.accel +
-        SimpleGameMetrics.drag * player.vx;
+        drag * player.vx;
       const newVy =
         player.vy +
         Math.sin(player.direction) * player.accel +
-        SimpleGameMetrics.drag * player.vy;
+        drag * player.vy;
       const newX = player.x + newVx * deltaTime;
       const newY = player.y + newVy * deltaTime;
 

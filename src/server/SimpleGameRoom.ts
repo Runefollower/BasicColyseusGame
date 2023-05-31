@@ -56,6 +56,10 @@ export class SimpleGameRoom extends Room<GameState> {
       this.gameLogic.handleInput(client.sessionId, input);
     });
 
+    this.onMessage("mouseDirection", (client, direction) => {
+      this.gameLogic.mouseDirection(client.sessionId, direction);
+    });
+
     // Register the "joinGame" message handler
     this.onMessage("joinGame", (client, input) => {
       console.log(

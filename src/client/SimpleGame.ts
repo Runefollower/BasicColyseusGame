@@ -150,6 +150,21 @@ async function connectToServer(): Promise<string> {
     }
   });
 
+  document.addEventListener(
+    "mousemove",
+    function (evt) {
+      // Assuming the spaceship is always at the center of the canvas.
+      const spaceshipPos = { x: canvas.width / 2, y: canvas.height / 2 };
+
+      // Calculate the direction from the spaceship to the mouse position.
+      const dx = evt.x - spaceshipPos.x;
+      const dy = evt.y - spaceshipPos.y;
+      const direction = Math.atan2(dy, dx);
+      room.send("mouseDirection", direction);
+    },
+    false
+  );
+
   window.addEventListener("resize", () => {
     // Resize canvas to match game area dimensions
     canvas.width = gameDiv.clientWidth;
