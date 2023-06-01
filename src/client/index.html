@@ -55,6 +55,22 @@
             /* Added this to stack game-div below game-login */
         }
 
+        .joystick-zone {
+            position: absolute;
+            bottom: 0;
+            width: 150px;
+            height: 150px;
+            opacity: 0.5;  /* Optional: Make the zones partially transparent */
+        }
+        
+        #movement-zone {
+            right: 0;
+        }
+        
+        #fire-zone {
+            left: 0;
+        }
+
 
         canvas {
             background-color: white;
@@ -85,6 +101,8 @@
     <div id="game-div">
         <canvas id="game" width="800" height="600"></canvas>
     </div>
+    <div id="movement-zone" class="joystick-zone"></div>
+    <div id="fire-zone" class="joystick-zone"></div>
 </body>
 
 </html>

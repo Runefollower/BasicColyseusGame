@@ -50,10 +50,15 @@ let joystickLeft = false;
 let joystickDown = false;
 
 if ("ontouchstart" in window) {
+  const movementZone = document.getElementById(
+    "movement-zone"
+  ) as HTMLDivElement;
+  movementZone.style.zIndex = "2";
+
   const optionsR: JoystickManagerOptions = {
-    zone: gameDiv,
+    zone: movementZone,
     mode: "static",
-    position: { right: "10%", bottom: "20%" },
+    position: { right: "50%", bottom: "50%" },
     size: 100,
     color: "blue",
   };
@@ -114,10 +119,13 @@ if ("ontouchstart" in window) {
     room.send("input", "d-up");
   });
 
+  const fireZone = document.getElementById("fire-zone") as HTMLDivElement;
+  fireZone.style.zIndex = "2";
+
   const optionsL: JoystickManagerOptions = {
-    zone: gameDiv,
+    zone: fireZone,
     mode: "static",
-    position: { left: "10%", bottom: "20%" },
+    position: { left: "50%", bottom: "50%" },
     size: 100,
     color: "blue",
   };
@@ -129,7 +137,7 @@ if ("ontouchstart" in window) {
     room.send("mouseDirection", -data.angle.radian);
   });
 
-  joystickR.on("end", function (evt, data) {
+  joystickL.on("end", function (evt, data) {
     room.send("input", "fire-up");
   });
 }
