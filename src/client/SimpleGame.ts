@@ -1,4 +1,8 @@
 import { SSGameEngineClient } from "./ClientGameEngine";
+
+import * as nipplejs from "nipplejs";
+import type { JoystickManagerOptions } from "nipplejs";
+
 import * as Colyseus from "colyseus.js";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -38,6 +42,96 @@ function render(): void {
       render();
     });
   }
+}
+
+let joystickUP = false;
+let joystickRight = false;
+let joystickLeft = false;
+let joystickDown = false;
+
+if ("ontouchstart" in window) {
+  const optionsR: JoystickManagerOptions = {
+    zone: gameDiv,
+    mode: "static",
+    position: { right: "10%", bottom: "20%" },
+    size: 100,
+    color: "blue",
+  };
+
+  const joystickR = nipplejs.create(optionsR);
+
+  joystickR.on("move", function (evt, data) {
+    const angle = data.angle.degree;
+    const force = data.force;
+
+    // Determine player direction based on joystick angle
+    if (angle >= 20 && angle < 160 && force > 0.2) {
+      if (!joystickUP) {
+        room.send("input", "w-down");
+        joystickUP = true;
+      }
+    } else if (joystickUP) {
+      room.send("input", "w-up");
+      joystickUP = false;
+    }
+
+    if (angle >= 135 && angle < 225 && force > 0.2) {
+      if (!joystickLeft) {
+        room.send("input", "a-down");
+        joystickLeft = true;
+      }
+    } else if (joystickLeft) {
+      room.send("input", "a-up");
+      joystickLeft = false;
+    }
+
+    if (angle >= 225 && angle < 315 && force > 0.2) {
+      if (!joystickDown) {
+        room.send("input", "s-down");
+        joystickDown = true;
+      }
+    } else if (joystickDown) {
+      room.send("input", "s-up");
+      joystickDown = false;
+    }
+
+    if (angle >= 315 || (angle < 45 && force > 0.2)) {
+      if (!joystickRight) {
+        room.send("input", "d-down");
+        joystickRight = true;
+      }
+    } else if (joystickRight) {
+      room.send("input", "d-up");
+      joystickRight = false;
+    }
+  });
+
+  joystickR.on("end", function (evt, data) {
+    // Send an 'up' command for every direction to stop moving/fire when joystick is released
+    room.send("input", "w-up");
+    room.send("input", "s-up");
+    room.send("input", "a-up");
+    room.send("input", "d-up");
+  });
+
+  const optionsL: JoystickManagerOptions = {
+    zone: gameDiv,
+    mode: "static",
+    position: { left: "10%", bottom: "20%" },
+    size: 100,
+    color: "blue",
+  };
+
+  const joystickL = nipplejs.create(optionsL);
+
+  joystickL.on("move", function (evt, data) {
+    room.send("input", "fire-down");
+    room.send("mouseDirection", -data.angle.radian);
+  });
+
+  joystickR.on("end", function (evt, data) {
+    room.send("input", "fire-up");
+  });
 }
 
 // Make this a let so it can be set when the username is entered.
