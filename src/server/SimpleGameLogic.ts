@@ -29,6 +29,8 @@ const SimpleGameMetrics = {
 let nextMinuteUpdate = 0;
 let nextLogMetricsUpdate = 0;
 
+const computerPlayerCount = 10;
+
 /**
  * Main class for the game logic
  */
@@ -52,7 +54,9 @@ export class SimpleGameLogic {
     SimpleGameMetrics.grid =
       this.gridGen.generateGridFromPredefinedPatterns(false);
 
-    this.addNewComputerPlayer();
+    for (let i = 0; i < computerPlayerCount; i++) {
+      this.addNewComputerPlayer();
+    }
   }
 
   /**
@@ -61,10 +65,10 @@ export class SimpleGameLogic {
   addNewComputerPlayer(): void {
     // Add the computer player
     const computerPlayerPosition = this.generateSpawnPosition();
-    const computerSessionID = "PC 01";
+    const computerSessionID = "PC " + String(this.computerPlayers.length);
 
     const computerPlayerState = new Player(
-      "Computer",
+      "Computer " + String(this.computerPlayers.length),
       computerPlayerPosition.x,
       computerPlayerPosition.y
     );

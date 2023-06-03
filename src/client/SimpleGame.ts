@@ -1,4 +1,5 @@
 import { SSGameEngineClient } from "./ClientGameEngine";
+import { SettingsController } from "./SettingsController";
 import { TouchInterface } from "./TouchInterface";
 
 import * as Colyseus from "colyseus.js";
@@ -29,6 +30,8 @@ const gameEngine: SSGameEngineClient = new SSGameEngineClient();
 
 // UI Controls for the touch interface
 const touchInterface: TouchInterface = new TouchInterface();
+
+const settingsController = new SettingsController(gameEngine);
 
 // The current username, will be provided by the user on start
 let username: string | null = null;
@@ -71,6 +74,8 @@ function render(): void {
     // Draw the new frame
     gameEngine.draw(ctx, udt, thisFrameRender, room.state);
 
+    settingsController.render(ctx);
+
     // Request the next update
     requestAnimationFrame(() => {
       render();
@@ -101,6 +106,11 @@ function gameServerInit(message: any): void {
   gameEngine.displayWidth = canvas.width;
   gameEngine.displayHeight = canvas.height;
 }
+
+function toggleClientShip(): void {
+  room.send("input", "change-type");
+}
+settingsController.addCallbackMenuItem("Toggle Ship", toggleClientShip);
 
 /**
  * Called when the game state is updated from the server
@@ -230,6 +240,10 @@ function uiMouseMove(event: MouseEvent): void {
   room.send("mouseDirection", direction);
 }
 
+function uiMouseClick(event: MouseEvent): void {
+  settingsController.clickEvent(event.clientX, event.clientY);
+}
+
 /**
  * Display is resized so reset the game play region
  *
@@ -262,6 +276,7 @@ async function connectToServer(): Promise<string> {
   document.addEventListener("keydown", uiKeyDown);
   document.addEventListener("keyup", uiKeyUp);
   document.addEventListener("mousemove", uiMouseMove, false);
+  document.addEventListener("click", uiMouseClick);
   window.addEventListener("resize", uiResize);
 
   render();

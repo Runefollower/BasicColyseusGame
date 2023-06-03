@@ -313,7 +313,7 @@ export class SSGameEngineClient {
     ];
 
     const xOffset = 20; // Adjust this as needed
-    const yOffset = 20; // Adjust this as needed
+    const yOffset = 150; // Adjust this as needed
 
     for (let i = 0; i < metrics.length; i++) {
       ctx.fillText(metrics[i], xOffset, yOffset + i * fontSize);
@@ -335,8 +335,8 @@ export class SSGameEngineClient {
       "T to toggle the ship type",
     ];
 
-    const xOffset = 20; // Adjust this as needed
-    const yOffset = 200; // Adjust this as needed
+    const xOffset = 20;
+    const yOffset = 300;
 
     for (let i = 0; i < instructions.length; i++) {
       ctx.fillText(instructions[i], xOffset, yOffset + i * fontSize);
