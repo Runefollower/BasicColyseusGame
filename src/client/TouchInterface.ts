@@ -13,6 +13,9 @@ export class TouchInterface {
   joystickLeft: boolean;
   joystickDown: boolean;
 
+  maxDistance: number;
+  deadZone: number;
+
   room: Colyseus.Room;
 
   constructor() {
@@ -20,6 +23,9 @@ export class TouchInterface {
     this.joystickRight = false;
     this.joystickLeft = false;
     this.joystickDown = false;
+
+    this.maxDistance = 50;
+    this.deadZone = 0.1 * this.maxDistance;
   }
 
   /**
@@ -64,7 +70,7 @@ export class TouchInterface {
     const joystickR = nipplejs.create(optionsR);
 
     // Event handlers for movement joystick
-    joystickR.on("move", this.movementJoyMoveHandler.bind(this));
+    joystickR.on("move", this.movementJoyProportionalMoveHandler.bind(this));
     joystickR.on("end", this.movementJoyEndHandler.bind(this));
 
     // Create the fire joystick, this will aim in Tank mode
@@ -85,59 +91,35 @@ export class TouchInterface {
   }
 
   /**
-   * Sends the movement signals to the server
+   * Sends the movement signals to the server based on proportional movement
    *
    * @param evt Event data
    * @param data Joystick parameters
    */
-  movementJoyMoveHandler(
+  movementJoyProportionalMoveHandler(
     evt: nipplejs.EventData,
     data: nipplejs.JoystickOutputData
   ): void {
-    const angle = data.angle.degree;
-    const force = data.force;
+    const dx = data.distance * Math.cos(data.angle.radian);
+    const dy = data.distance * Math.sin(data.angle.radian);
+
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    const normalizedDx =
+      absDx > this.deadZone
+        ? (dx - Math.sign(dx) * this.deadZone) /
+          (this.maxDistance - this.deadZone)
+        : 0;
+    const normalizedDy =
+      absDy > this.deadZone
+        ? (dy - Math.sign(dy) * this.deadZone) /
+          (this.maxDistance - this.deadZone)
+        : 0;
 
     if (this.room !== undefined) {
-      // Determine player direction based on joystick angle
-      if (angle >= 20 && angle < 160 && force > 0.2) {
-        if (!this.joystickUP) {
-          this.room.send("input", "w-down");
-          this.joystickUP = true;
-        }
-      } else if (this.joystickUP) {
-        this.room.send("input", "w-up");
-        this.joystickUP = false;
-      }
-
-      if (angle >= 135 && angle < 225 && force > 0.2) {
-        if (!this.joystickLeft) {
-          this.room.send("input", "a-down");
-          this.joystickLeft = true;
-        }
-      } else if (this.joystickLeft) {
-        this.room.send("input", "a-up");
-        this.joystickLeft = false;
-      }
-
-      if (angle >= 225 && angle < 315 && force > 0.2) {
-        if (!this.joystickDown) {
-          this.room.send("input", "s-down");
-          this.joystickDown = true;
-        }
-      } else if (this.joystickDown) {
-        this.room.send("input", "s-up");
-        this.joystickDown = false;
-      }
-
-      if (angle >= 315 || (angle < 45 && force > 0.2)) {
-        if (!this.joystickRight) {
-          this.room.send("input", "d-down");
-          this.joystickRight = true;
-        }
-      } else if (this.joystickRight) {
-        this.room.send("input", "d-up");
-        this.joystickRight = false;
-      }
+      this.room.send("turn", normalizedDx);
+      this.room.send("accel", normalizedDy);
     }
   }
 
@@ -152,11 +134,8 @@ export class TouchInterface {
     data: nipplejs.JoystickOutputData
   ): void {
     if (this.room !== undefined) {
-      // Send an 'up' command for every direction to stop moving/fire when joystick is released
-      this.room.send("input", "w-up");
-      this.room.send("input", "s-up");
-      this.room.send("input", "a-up");
-      this.room.send("input", "d-up");
+      this.room.send("turn", 0);
+      this.room.send("accel", 0);
     }
   }
 

@@ -56,6 +56,16 @@ export class SimpleGameRoom extends Room<GameState> {
       this.gameLogic.handleInput(client.sessionId, input);
     });
 
+    // Register Turn signal - number from -1 (left) to 1 (right)
+    this.onMessage("turn", (client, input) => {
+      this.gameLogic.handleTurn(client.sessionId, input);
+    });
+
+    // Register accel signal - number from -1 (back) to 1 (forward)
+    this.onMessage("accel", (client, input) => {
+      this.gameLogic.handleAccel(client.sessionId, input);
+    });
+
     this.onMessage("mouseDirection", (client, direction) => {
       this.gameLogic.mouseDirection(client.sessionId, direction);
     });

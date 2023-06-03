@@ -37,6 +37,11 @@ let username: string | null = null;
 let lastStateUpdate = performance.now();
 let lastFrameRender = performance.now();
 
+let inputForward = false;
+let inputBack = false;
+let inputRight = false;
+let inputLeft = false;
+
 // If we are in a touch interface, set up the touch controls
 if ("ontouchstart" in window) {
   touchInterface.initMobileUI(moveZone, fireZone);
@@ -117,22 +122,22 @@ function uiKeyDown(event: KeyboardEvent): void {
       case "ArrowUp":
       case "w":
       case "W":
-        room.send("input", "w-down");
+        inputForward = true;
         break;
       case "ArrowDown":
       case "s":
       case "S":
-        room.send("input", "s-down");
+        inputBack = true;
         break;
       case "ArrowLeft":
       case "a":
       case "A":
-        room.send("input", "a-down");
+        inputLeft = true;
         break;
       case "ArrowRight":
       case "d":
       case "D":
-        room.send("input", "d-down");
+        inputRight = true;
         break;
       case " ":
         room.send("input", "fire-down");
@@ -155,6 +160,8 @@ function uiKeyDown(event: KeyboardEvent): void {
         break;
     }
   }
+
+  sendMovementEvents();
 }
 
 /**
@@ -168,28 +175,43 @@ function uiKeyUp(event: KeyboardEvent): void {
       case "ArrowUp":
       case "w":
       case "W":
-        room.send("input", "w-up");
+        inputForward = false;
         break;
       case "ArrowDown":
       case "s":
       case "S":
-        room.send("input", "s-up");
+        inputBack = false;
         break;
       case "ArrowLeft":
       case "a":
       case "A":
-        room.send("input", "a-up");
+        inputLeft = false;
         break;
       case "ArrowRight":
       case "d":
       case "D":
-        room.send("input", "d-up");
+        inputRight = false;
         break;
       case " ":
         room.send("input", "fire-up");
         break;
     }
   }
+
+  sendMovementEvents();
+}
+
+function sendMovementEvents(): void {
+  let turn = 0;
+  let accel = 0;
+
+  if (inputForward) accel += 1;
+  if (inputBack) accel -= 1;
+  if (inputRight) turn += 1;
+  if (inputLeft) turn -= 1;
+
+  room.send("turn", turn);
+  room.send("accel", accel);
 }
 
 /**

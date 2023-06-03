@@ -118,25 +118,25 @@ export class ComputerPlayer {
 
     // if we were turning left but not any more, stop
     if (this.turningLeft && direction !== DIRECTION.LEFT) {
-      this.gameLogic.handleInput(this.sessionID, "a-up");
+      this.gameLogic.handleTurn(this.sessionID, 0);
       this.turningLeft = false;
     }
 
     // if we were turning right but not any more, stop
     if (this.turningRight && direction !== DIRECTION.RIGHT) {
-      this.gameLogic.handleInput(this.sessionID, "d-up");
+      this.gameLogic.handleTurn(this.sessionID, 0);
       this.turningRight = false;
     }
 
     // if we were not turning left but now we are, start
     if (!this.turningLeft && direction === DIRECTION.LEFT) {
-      this.gameLogic.handleInput(this.sessionID, "a-down");
+      this.gameLogic.handleTurn(this.sessionID, -1);
       this.turningLeft = true;
     }
 
     // if we were not turning left but now we are, start
     if (!this.turningRight && direction === DIRECTION.RIGHT) {
-      this.gameLogic.handleInput(this.sessionID, "d-down");
+      this.gameLogic.handleTurn(this.sessionID, 1);
       this.turningRight = true;
     }
   }
@@ -149,13 +149,13 @@ export class ComputerPlayer {
   accelerate(accel: boolean): void {
     // if we were turning right but not any more, stop
     if (this.accelerating && !accel) {
-      this.gameLogic.handleInput(this.sessionID, "w-up");
+      this.gameLogic.handleAccel(this.sessionID, 0);
       this.accelerating = false;
     }
 
     // if we were not turning left but now we are, start
     if (!this.accelerating && accel) {
-      this.gameLogic.handleInput(this.sessionID, "w-down");
+      this.gameLogic.handleAccel(this.sessionID, 1);
       this.accelerating = true;
     }
   }

@@ -85,9 +85,9 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Process client messages such as key movement
+   * Process client event messages
    *
-   * @param client The client generating input
+   * @param sessionID Session id of the client sending the message
    * @param input String message from client typically indicating key activity
    */
   handleInput(sessionID: string, input: string): void {
@@ -110,68 +110,6 @@ export class SimpleGameLogic {
       }
 
       switch (input) {
-        case "w-down":
-          if (playerType.controlType === controlTypes.rocketShip) {
-            player.accel = SimpleGameMetrics.acceleration;
-          } else if (playerType.controlType === controlTypes.tank) {
-            player.vy = -SimpleGameMetrics.tankSpeed;
-          }
-          break;
-        case "w-up":
-          if (playerType.controlType === controlTypes.rocketShip) {
-            player.accel = 0;
-          } else if (playerType.controlType === controlTypes.tank) {
-            player.vy = 0;
-          }
-          break;
-        case "s-down":
-          /*
-          if (playerType.controlType === controlTypes.rocketShip) {
-            player.accel -= SimpleGameMetrics.acceleration;
-          } 
-          */
-          if (playerType.controlType === controlTypes.tank) {
-            player.vy = SimpleGameMetrics.tankSpeed;
-          }
-          break;
-        case "s-up":
-          /*
-          if (playerType.controlType === controlTypes.rocketShip) {
-            player.accel += SimpleGameMetrics.acceleration;
-          }  
-          */
-          if (playerType.controlType === controlTypes.tank) {
-            player.vy = 0;
-          }
-          break;
-        case "a-down":
-          if (playerType.controlType === controlTypes.rocketShip) {
-            player.vr = -SimpleGameMetrics.angularAcceleration;
-          } else if (playerType.controlType === controlTypes.tank) {
-            player.vx = -SimpleGameMetrics.tankSpeed;
-          }
-          break;
-        case "a-up":
-          if (playerType.controlType === controlTypes.rocketShip) {
-            player.vr = 0;
-          } else if (playerType.controlType === controlTypes.tank) {
-            player.vx = 0;
-          }
-          break;
-        case "d-down":
-          if (playerType.controlType === controlTypes.rocketShip) {
-            player.vr = SimpleGameMetrics.angularAcceleration;
-          } else if (playerType.controlType === controlTypes.tank) {
-            player.vx = SimpleGameMetrics.tankSpeed;
-          }
-          break;
-        case "d-up":
-          if (playerType.controlType === controlTypes.rocketShip) {
-            player.vr = 0;
-          } else if (playerType.controlType === controlTypes.tank) {
-            player.vx = 0;
-          }
-          break;
         case "fire-down":
           player.firing = true;
           break;
@@ -195,6 +133,95 @@ export class SimpleGameLogic {
     }
   }
 
+  /**
+   * Handle proportional movement messages from the client for
+   * left and right direction
+   *
+   * @param sessionID Session id of the client sending the message
+   * @param direction Left or right values from -1 to 1
+   * @returns
+   */
+  handleTurn(sessionID: string, direction: number): void {
+    if (this.state.players.has(sessionID)) {
+      const player = this.state.players.get(sessionID);
+
+      const playerType = ShipDesignsMap.get(player.shipType);
+      if (playerType === undefined) {
+        console.error(
+          generateLogWithTimestamp(
+            "Player " +
+              sessionID +
+              " name: " +
+              player.username +
+              " had unknown type " +
+              player.shipType
+          )
+        );
+        return;
+      }
+
+      // Check for valid input values.  Must be between -1 and 1
+      if (direction < -1) direction = -1;
+      if (direction > 1) direction = 1;
+
+      if (playerType.controlType === controlTypes.rocketShip) {
+        player.vr = direction * SimpleGameMetrics.angularAcceleration;
+      } else if (playerType.controlType === controlTypes.tank) {
+        player.vx = direction * SimpleGameMetrics.tankSpeed;
+      }
+    }
+  }
+
+  /**
+   * Handle proportional forward back messages from the client
+   *
+   * @param sessionID Session id of the client
+   * @param accel Forward back signal from -1 to 1
+   * @returns
+   */
+  handleAccel(sessionID: string, accel: number): void {
+    if (this.state.players.has(sessionID)) {
+      const player = this.state.players.get(sessionID);
+
+      const playerType = ShipDesignsMap.get(player.shipType);
+      if (playerType === undefined) {
+        console.error(
+          generateLogWithTimestamp(
+            "Player " +
+              sessionID +
+              " name: " +
+              player.username +
+              " had unknown type " +
+              player.shipType
+          )
+        );
+        return;
+      }
+
+      // Check for valid input values.  Must be between -1 and 1
+      if (accel < -1) accel = -1;
+      if (accel > 1) accel = 1;
+
+      // adjust based on control type
+      if (playerType.controlType === controlTypes.rocketShip && accel < 0) {
+        accel = 0;
+      }
+
+      if (playerType.controlType === controlTypes.rocketShip) {
+        player.accel = accel * SimpleGameMetrics.acceleration;
+      } else if (playerType.controlType === controlTypes.tank) {
+        player.vy = -1 * accel * SimpleGameMetrics.tankSpeed;
+      }
+    }
+  }
+
+  /**
+   * Mouse direction events, used in tank mode to point
+   * towards the mouse
+   *
+   * @param sessionID Session id of the client
+   * @param direction Direction from player to mouse
+   */
   mouseDirection(sessionID: string, direction: number): void {
     if (this.state.players.has(sessionID)) {
       const player = this.state.players.get(sessionID);
@@ -273,28 +300,27 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Update the state of the game for the next game cycle.
+   * Update the player for the game loop including position and wall collisions
    *
-   * @param deltaTime Time since the last game update in millis
-   * @param elapsedTime Time since game start in millis
+   * @param deltaTime
+   * @param elapsedTime
+   * @param player
+   * @param sessionId
    */
-  update(deltaTime: number, elapsedTime: number): void {
-    // update the computer managed players
-    this.computerPlayers.forEach((computerPlayer) => {
-      computerPlayer.update(deltaTime, elapsedTime);
-    });
-
-    this.state.players.forEach((player, sessionId) => {
-      const playerType = ShipDesignsMap.get(player.shipType);
-      if (playerType === undefined) {
-        console.error(
-          generateLogWithTimestamp(
-            "Unknown ship type: " + player.shipType + " for " + player.username
-          )
-        );
-        return;
-      }
-
+  updatePlayer(
+    deltaTime: number,
+    elapsedTime: number,
+    player: Player,
+    sessionId: string
+  ): void {
+    const playerType = ShipDesignsMap.get(player.shipType);
+    if (playerType === undefined) {
+      console.error(
+        generateLogWithTimestamp(
+          "Unknown ship type: " + player.shipType + " for " + player.username
+        )
+      );
+    } else {
       // Player Radius is defined in type
       const playerRadius = playerType.collisionRadius;
 
@@ -384,55 +410,103 @@ export class SimpleGameLogic {
           )
         );
       }
+    }
+  }
+
+  /**
+   * Check to see if the player and laser collided
+   *
+   * @param player
+   * @param laser
+   * @returns
+   */
+  laserHit(player: Player, laser: Laser): boolean {
+    const playerType = ShipDesignsMap.get(player.shipType);
+    if (playerType === undefined) {
+      console.error(
+        generateLogWithTimestamp(
+          "Unknown ship type: " + player.shipType + " for " + player.username
+        )
+      );
+      return false;
+    }
+
+    const playerRadius = playerType.collisionRadius;
+    const dx = laser.x - player.x;
+    const dy = laser.y - player.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    return distance <= playerRadius;
+  }
+
+  /**
+   * Update the position of the laser and check for time or out
+   * of bounds conditions when it should be removed
+   *
+   * @param deltaTime
+   * @param elapsedTime
+   * @param laser
+   * @returns
+   */
+  updateAndTimeLaser(
+    deltaTime: number,
+    elapsedTime: number,
+    laser: Laser
+  ): boolean {
+    const newX = laser.x + laser.vx * deltaTime;
+    const newY = laser.y + laser.vy * deltaTime;
+    laser.remainingTime -= deltaTime;
+
+    // Check for wall collisions
+    const laserCollision = this.checkForWallCollision(
+      laser.x,
+      laser.y,
+      newX,
+      newY,
+      laser.vx,
+      laser.vy,
+      1
+    );
+
+    laser.x = newX;
+    laser.y = newY;
+
+    const inBounds =
+      laser.x >= 0 &&
+      laser.x <= SimpleGameMetrics.playAreaWidth &&
+      laser.y >= 0 &&
+      laser.y <= SimpleGameMetrics.playAreaHeight;
+
+    // Keep the laser only if the remaining time is greater than zero
+    return laser.remainingTime > 0 && !laserCollision.hit && inBounds;
+  }
+
+  /**
+   * Update the state of the game for the next game cycle.
+   *
+   * @param deltaTime Time since the last game update in millis
+   * @param elapsedTime Time since game start in millis
+   */
+  update(deltaTime: number, elapsedTime: number): void {
+    // update the computer managed players
+    this.computerPlayers.forEach((computerPlayer) => {
+      computerPlayer.update(deltaTime, elapsedTime);
+    });
+
+    this.state.players.forEach((player, sessionId) => {
+      this.updatePlayer(deltaTime, elapsedTime, player, sessionId);
     }); // end the player loop
 
     // Update laser positions and reduce remaining time
     // remove if the time limit is hit or it hit a wall
     this.state.lasers = this.state.lasers.filter((laser) => {
-      const newX = laser.x + laser.vx * deltaTime;
-      const newY = laser.y + laser.vy * deltaTime;
-      laser.remainingTime -= deltaTime;
-
-      // Check for wall collisions
-      const laserCollision = this.checkForWallCollision(
-        laser.x,
-        laser.y,
-        newX,
-        newY,
-        laser.vx,
-        laser.vy,
-        1
-      );
-
-      laser.x = newX;
-      laser.y = newY;
-
-      // Keep the laser only if the remaining time is greater than zero
-      return laser.remainingTime > 0 && !laserCollision.hit;
+      return this.updateAndTimeLaser(deltaTime, elapsedTime, laser);
     });
 
     // Check for collisions between lasers and ships
     for (const laser of this.state.lasers) {
       for (const player of this.state.players.values()) {
-        const playerType = ShipDesignsMap.get(player.shipType);
-        if (playerType === undefined) {
-          console.error(
-            generateLogWithTimestamp(
-              "Unknown ship type: " +
-                player.shipType +
-                " for " +
-                player.username
-            )
-          );
-          break;
-        }
-
-        const playerRadius = playerType.collisionRadius;
-        const dx = laser.x - player.x;
-        const dy = laser.y - player.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance <= playerRadius) {
+        if (this.laserHit(player, laser)) {
           // Laser hit a ship
           const attacker = this.state.players.get(laser.ownerSessionId);
 
@@ -489,16 +563,6 @@ export class SimpleGameLogic {
         }
       }
     }
-
-    // Remove lasers that are out of bounds
-    this.state.lasers = this.state.lasers.filter((laser) => {
-      return (
-        laser.x >= 0 &&
-        laser.x <= SimpleGameMetrics.playAreaWidth &&
-        laser.y >= 0 &&
-        laser.y <= SimpleGameMetrics.playAreaHeight
-      );
-    });
 
     this.updateMetrics(elapsedTime);
   }
