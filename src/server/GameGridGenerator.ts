@@ -259,12 +259,6 @@ export class GameGridGenerator {
           .map(() => [])
       );
 
-    const wallMasks = [
-      this.wallMask.T,
-      this.wallMask.R,
-      this.wallMask.B,
-      this.wallMask.L,
-    ];
     const solidGrid = 0b1111;
 
     // Bresenham's line algorithm

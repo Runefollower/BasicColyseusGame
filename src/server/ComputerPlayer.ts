@@ -61,16 +61,37 @@ export class ComputerPlayer {
     let closestPlayer = null;
     let minDistance = Number.MAX_SAFE_INTEGER;
 
+    const thisPlayerGrid = this.gameLogic.gridPosForPoint({
+      x: this.thisPlayer.x,
+      y: this.thisPlayer.y,
+    });
+    const visibilityArray: Array<{ x: number; y: number }> =
+      this.gameLogic.SimpleGameMetrics.visibilityMatrix[thisPlayerGrid.y][
+        thisPlayerGrid.x
+      ];
+
     for (const [sessionID, player] of this.gameLogic.state.players.entries()) {
       if (sessionID === this.sessionID) continue; // Skip self
 
-      const dx = player.x - this.thisPlayer.x;
-      const dy = player.y - this.thisPlayer.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      let isVisible = false;
+      const playerGrid = this.gameLogic.gridPosForPoint({
+        x: player.x,
+        y: player.y,
+      });
+      for (const visiblePt of visibilityArray) {
+        if (visiblePt.x === playerGrid.x && visiblePt.y === playerGrid.y)
+          isVisible = true;
+      }
 
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestPlayer = player;
+      if (isVisible) {
+        const dx = player.x - this.thisPlayer.x;
+        const dy = player.y - this.thisPlayer.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPlayer = player;
+        }
       }
     }
 

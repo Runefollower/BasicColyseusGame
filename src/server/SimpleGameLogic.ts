@@ -5,40 +5,40 @@ import { GameGridGenerator } from "./GameGridGenerator";
 import { ComputerPlayer } from "./ComputerPlayer";
 import { ShipDesigns, ShipDesignsMap, controlTypes } from "./ShipDesigns";
 
-const gridSize = 30;
-const SimpleGameMetrics = {
-  gridSize,
-  playAreaWidth: gridSize * 100,
-  playAreaHeight: gridSize * 100,
-  cellSize: 100,
-  acceleration: 0.01,
-  angularAcceleration: 0.005,
-  drag: -0.01,
-  tankSpeed: 0.1,
-  laserSpeed: 0.4,
-  fireDelayInterval: 200,
-  laserDamage: 25,
-  ShipDesigns,
-  grid: [
-    [0, 0],
-    [0, 0],
-  ],
-  visibilityMatrix: [],
-};
-
 // Controls for metrics updates
 let nextMinuteUpdate = 0;
 let nextLogMetricsUpdate = 0;
 
-const computerPlayerCount = 2;
+const computerPlayerCount = 1;
 
 /**
  * Main class for the game logic
  */
 export class SimpleGameLogic {
+  gridSize = 30;
+  SimpleGameMetrics = {
+    gridSize: this.gridSize,
+    playAreaWidth: this.gridSize * 100,
+    playAreaHeight: this.gridSize * 100,
+    cellSize: 100,
+    acceleration: 0.01,
+    angularAcceleration: 0.005,
+    drag: -0.01,
+    tankSpeed: 0.1,
+    laserSpeed: 0.4,
+    fireDelayInterval: 200,
+    laserDamage: 25,
+    ShipDesigns,
+    grid: [
+      [0, 0],
+      [0, 0],
+    ],
+    visibilityMatrix: [],
+  };
+
   state: GameState;
   gameUpdateTimestamps: number[];
-  gridGen = new GameGridGenerator(SimpleGameMetrics.gridSize);
+  gridGen = new GameGridGenerator(this.gridSize);
   computerPlayers: ComputerPlayer[];
 
   constructor(state: GameState) {
@@ -52,11 +52,13 @@ export class SimpleGameLogic {
     */
 
     // Generate a grid from standard 10 X 10 blocks
-    SimpleGameMetrics.grid =
+    this.SimpleGameMetrics.grid =
       this.gridGen.generateGridFromPredefinedPatterns(false);
 
-    SimpleGameMetrics.visibilityMatrix =
-      this.gridGen.generateVisibilityMatrixDiagonal(SimpleGameMetrics.grid);
+    this.SimpleGameMetrics.visibilityMatrix =
+      this.gridGen.generateVisibilityMatrixDiagonal(
+        this.SimpleGameMetrics.grid
+      );
 
     for (let i = 0; i < computerPlayerCount; i++) {
       this.addNewComputerPlayer();
@@ -89,7 +91,7 @@ export class SimpleGameLogic {
    * @returns Game metrics
    */
   getInitializationData(): any {
-    return SimpleGameMetrics;
+    return this.SimpleGameMetrics;
   }
 
   /**
@@ -173,9 +175,9 @@ export class SimpleGameLogic {
       if (direction > 1) direction = 1;
 
       if (playerType.controlType === controlTypes.rocketShip) {
-        player.vr = direction * SimpleGameMetrics.angularAcceleration;
+        player.vr = direction * this.SimpleGameMetrics.angularAcceleration;
       } else if (playerType.controlType === controlTypes.tank) {
-        player.vx = direction * SimpleGameMetrics.tankSpeed;
+        player.vx = direction * this.SimpleGameMetrics.tankSpeed;
       }
     }
   }
@@ -216,9 +218,9 @@ export class SimpleGameLogic {
       }
 
       if (playerType.controlType === controlTypes.rocketShip) {
-        player.accel = accel * SimpleGameMetrics.acceleration;
+        player.accel = accel * this.SimpleGameMetrics.acceleration;
       } else if (playerType.controlType === controlTypes.tank) {
-        player.vy = -1 * accel * SimpleGameMetrics.tankSpeed;
+        player.vy = -1 * accel * this.SimpleGameMetrics.tankSpeed;
       }
     }
   }
@@ -267,16 +269,16 @@ export class SimpleGameLogic {
    */
   generateSpawnPosition(): { x: number; y: number } {
     let spawnPosition = {
-      x: Math.floor(Math.random() * SimpleGameMetrics.playAreaWidth),
-      y: Math.floor(Math.random() * SimpleGameMetrics.playAreaHeight),
+      x: Math.floor(Math.random() * this.SimpleGameMetrics.playAreaWidth),
+      y: Math.floor(Math.random() * this.SimpleGameMetrics.playAreaHeight),
     };
 
     // Check if the spawn position is within a walled cell
     while (this.isInWalledCell(spawnPosition.x, spawnPosition.y)) {
       console.log("hit a block");
       spawnPosition = {
-        x: Math.floor(Math.random() * SimpleGameMetrics.playAreaWidth),
-        y: Math.floor(Math.random() * SimpleGameMetrics.playAreaHeight),
+        x: Math.floor(Math.random() * this.SimpleGameMetrics.playAreaWidth),
+        y: Math.floor(Math.random() * this.SimpleGameMetrics.playAreaHeight),
       };
     }
 
@@ -291,11 +293,11 @@ export class SimpleGameLogic {
    * @returns True if the point is within a cell with all four walls, false otherwise.
    */
   isInWalledCell(x: number, y: number): boolean {
-    const gridX = Math.floor(x / SimpleGameMetrics.cellSize);
-    const gridY = Math.floor(y / SimpleGameMetrics.cellSize);
+    const gridX = Math.floor(x / this.SimpleGameMetrics.cellSize);
+    const gridY = Math.floor(y / this.SimpleGameMetrics.cellSize);
 
     // Check if the cell at (gridX, gridY) has all walls
-    return SimpleGameMetrics.grid[gridY][gridX] === 0b1111;
+    return this.SimpleGameMetrics.grid[gridY][gridX] === 0b1111;
   }
 
   /**
@@ -333,7 +335,7 @@ export class SimpleGameLogic {
       const playerRadius = playerType.collisionRadius;
 
       // Tank control types have no drag
-      let drag = SimpleGameMetrics.drag;
+      let drag = this.SimpleGameMetrics.drag;
       if (playerType.controlType === controlTypes.tank) drag = 0;
 
       // Compute proposed new position
@@ -368,16 +370,16 @@ export class SimpleGameLogic {
       player.direction += player.vr * deltaTime;
 
       // wrap the player position if somehow we escaped
-      if (player.x > SimpleGameMetrics.playAreaWidth) {
+      if (player.x > this.SimpleGameMetrics.playAreaWidth) {
         player.x = 0;
       } else if (player.x < 0) {
-        player.x = SimpleGameMetrics.playAreaWidth;
+        player.x = this.SimpleGameMetrics.playAreaWidth;
       }
 
-      if (player.y > SimpleGameMetrics.playAreaHeight) {
+      if (player.y > this.SimpleGameMetrics.playAreaHeight) {
         player.y = 0;
       } else if (player.y < 0) {
-        player.y = SimpleGameMetrics.playAreaHeight;
+        player.y = this.SimpleGameMetrics.playAreaHeight;
       }
 
       player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
@@ -385,15 +387,16 @@ export class SimpleGameLogic {
       // if the player is in firing mode, see if we can generate a new fire event
       if (
         player.firing &&
-        elapsedTime - player.lastFired >= SimpleGameMetrics.fireDelayInterval
+        elapsedTime - player.lastFired >=
+          this.SimpleGameMetrics.fireDelayInterval
       ) {
         this.state.lasers.push(
           new Laser(
             player.x + Math.cos(player.direction) * playerRadius,
             player.y + Math.sin(player.direction) * playerRadius,
-            Math.cos(player.direction) * SimpleGameMetrics.laserSpeed +
+            Math.cos(player.direction) * this.SimpleGameMetrics.laserSpeed +
               player.vx,
-            Math.sin(player.direction) * SimpleGameMetrics.laserSpeed +
+            Math.sin(player.direction) * this.SimpleGameMetrics.laserSpeed +
               player.vy,
             player.direction,
             sessionId
@@ -481,9 +484,9 @@ export class SimpleGameLogic {
 
     const inBounds =
       laser.x >= 0 &&
-      laser.x <= SimpleGameMetrics.playAreaWidth &&
+      laser.x <= this.SimpleGameMetrics.playAreaWidth &&
       laser.y >= 0 &&
-      laser.y <= SimpleGameMetrics.playAreaHeight;
+      laser.y <= this.SimpleGameMetrics.playAreaHeight;
 
     // Keep the laser only if the remaining time is greater than zero
     return laser.remainingTime > 0 && !laserCollision.hit && inBounds;
@@ -525,7 +528,7 @@ export class SimpleGameLogic {
             attacker !== player
           ) {
             // apply damage
-            player.health -= SimpleGameMetrics.laserDamage;
+            player.health -= this.SimpleGameMetrics.laserDamage;
 
             // Remove the laser
             this.state.lasers.splice(this.state.lasers.indexOf(laser), 1);
@@ -608,13 +611,13 @@ export class SimpleGameLogic {
 
     // Find the grid cell that we are currently in
     let gridXY = this.gridPosForPoint({ x, y });
-    const gridCellA = SimpleGameMetrics.grid[gridXY.y][gridXY.x];
+    const gridCellA = this.SimpleGameMetrics.grid[gridXY.y][gridXY.x];
     newVal = this.checkGridWallCollision(gridCellA, gridXY, newVal, radius);
 
     if (!newVal.hit) {
       // check the grid we are moving into
       gridXY = this.gridPosForPoint({ x, y });
-      const gridCellB = SimpleGameMetrics.grid[gridXY.y][gridXY.x];
+      const gridCellB = this.SimpleGameMetrics.grid[gridXY.y][gridXY.x];
 
       if (gridCellA !== gridCellB) {
         newVal = this.checkGridWallCollision(gridCellB, gridXY, newVal, radius);
@@ -644,15 +647,15 @@ export class SimpleGameLogic {
     returnPos.x = Math.max(
       0,
       Math.min(
-        SimpleGameMetrics.gridSize - 1,
-        Math.floor(pt.x / SimpleGameMetrics.cellSize)
+        this.SimpleGameMetrics.gridSize - 1,
+        Math.floor(pt.x / this.SimpleGameMetrics.cellSize)
       )
     );
     returnPos.y = Math.max(
       0,
       Math.min(
-        SimpleGameMetrics.gridSize - 1,
-        Math.floor(pt.y / SimpleGameMetrics.cellSize)
+        this.SimpleGameMetrics.gridSize - 1,
+        Math.floor(pt.y / this.SimpleGameMetrics.cellSize)
       )
     );
 
@@ -681,17 +684,18 @@ export class SimpleGameLogic {
     radius: number
   ): { newX: number; newY: number; vx: number; vy: number; hit: boolean } {
     // Check for collisions with the left and right
-    const newXinCell = newVal.newX - gridPos.x * SimpleGameMetrics.cellSize;
+    const newXinCell =
+      newVal.newX - gridPos.x * this.SimpleGameMetrics.cellSize;
     if (
       (gridCell & this.gridGen.wallMask.R) !== 0 &&
-      newXinCell + radius > SimpleGameMetrics.cellSize
+      newXinCell + radius > this.SimpleGameMetrics.cellSize
     ) {
       // Collided with right wall
       newVal.hit = true;
       newVal.vx = 0; // Stop horizontal movement
       newVal.newX =
-        gridPos.x * SimpleGameMetrics.cellSize +
-        SimpleGameMetrics.cellSize -
+        gridPos.x * this.SimpleGameMetrics.cellSize +
+        this.SimpleGameMetrics.cellSize -
         radius; // Move to the left of the wall
     } else if (
       (gridCell & this.gridGen.wallMask.L) !== 0 &&
@@ -700,21 +704,22 @@ export class SimpleGameLogic {
       // Collided with left wall
       newVal.hit = true;
       newVal.vx = 0; // Stop horizontal movement
-      newVal.newX = gridPos.x * SimpleGameMetrics.cellSize + radius; // Move to the right of the wall
+      newVal.newX = gridPos.x * this.SimpleGameMetrics.cellSize + radius; // Move to the right of the wall
     }
 
     // Check for collisions with the top and bottom
-    const newYinCell = newVal.newY - gridPos.y * SimpleGameMetrics.cellSize;
+    const newYinCell =
+      newVal.newY - gridPos.y * this.SimpleGameMetrics.cellSize;
     if (
       (gridCell & this.gridGen.wallMask.B) !== 0 &&
-      newYinCell + radius > SimpleGameMetrics.cellSize
+      newYinCell + radius > this.SimpleGameMetrics.cellSize
     ) {
       // Collided with bottom wall
       newVal.hit = true;
       newVal.vy = 0; // Stop vertical movement
       newVal.newY =
-        gridPos.y * SimpleGameMetrics.cellSize +
-        SimpleGameMetrics.cellSize -
+        gridPos.y * this.SimpleGameMetrics.cellSize +
+        this.SimpleGameMetrics.cellSize -
         radius; // Move above the wall
     } else if (
       (gridCell & this.gridGen.wallMask.T) !== 0 &&
@@ -723,7 +728,7 @@ export class SimpleGameLogic {
       // Collided with top wall
       newVal.hit = true;
       newVal.vy = 0; // Stop vertical movement
-      newVal.newY = gridPos.y * SimpleGameMetrics.cellSize + radius; // Move below the wall
+      newVal.newY = gridPos.y * this.SimpleGameMetrics.cellSize + radius; // Move below the wall
     }
 
     return newVal;
