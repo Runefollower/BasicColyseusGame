@@ -29,7 +29,7 @@ const SimpleGameMetrics = {
 let nextMinuteUpdate = 0;
 let nextLogMetricsUpdate = 0;
 
-const computerPlayerCount = 10;
+const computerPlayerCount = 2;
 
 /**
  * Main class for the game logic
