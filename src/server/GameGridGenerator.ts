@@ -265,6 +265,7 @@ export class GameGridGenerator {
       this.wallMask.B,
       this.wallMask.L,
     ];
+    const solidGrid = 0b1111;
 
     // Bresenham's line algorithm
     function* bresenhamLine(
@@ -300,13 +301,28 @@ export class GameGridGenerator {
         for (let y1 = 0; y1 < this.gridSize; y1++) {
           for (let x1 = 0; x1 < this.gridSize; x1++) {
             let visible = true;
+            let hitSolidWall = false;
             for (const point of bresenhamLine(x0, y0, x1, y1)) {
               if (point.x === x0 && point.y === y0) continue;
+              if (
+                point.x === x1 &&
+                point.y === y1 &&
+                grid[point.y][point.x] === solidGrid
+              )
+                continue;
+              /*
               for (const mask of wallMasks) {
                 if (grid[point.y][point.x] & mask) {
                   visible = false;
                   break;
                 }
+              }
+              */
+              if (grid[point.y][point.x] === solidGrid) {
+                hitSolidWall = true;
+              } else if (hitSolidWall) {
+                visible = false;
+                break;
               }
               if (!visible) break;
             }

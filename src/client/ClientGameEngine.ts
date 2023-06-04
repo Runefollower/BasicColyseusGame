@@ -251,7 +251,7 @@ export class SSGameEngineClient {
           if (isVisible) {
             context.fillStyle = "grey";
           } else {
-            context.fillStyle = "blue";
+            context.fillStyle = "rgb(180,180,180)";
           }
           context.strokeStyle = "black";
           context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
@@ -259,7 +259,7 @@ export class SSGameEngineClient {
           if (isVisible) {
             context.fillStyle = "rgb(255,255,255)";
           } else {
-            context.fillStyle = "rgb(200,200,200)";
+            context.fillStyle = "rgb(240,240,240)";
           }
           context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
         }
