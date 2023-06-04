@@ -237,6 +237,89 @@ export class GameGridGenerator {
       }
     }
   }
+
+  /**
+   * Generates a visibility matrix considering diagonal vision, which represents the set of visible grid cells from each cell in the grid.
+   * It accounts for obstacles/walls represented by the bitmask values in wallMask for each cell.
+   *
+   * @param {number[][]} grid The game grid, represented as a 2D array. Each cell contains a binary representation of the walls.
+   * @param {object} wm The wallMask object, containing binary representations for top (T), right (R), bottom (B), and left (L) walls.
+   * @returns {Set[][]} A 2D array of Sets, where each Set contains grid coordinates {x: number, y: number} of visible cells from the corresponding cell.
+   * If the cell at coordinates (y, x) has walls, those are considered as obstacles for visibility.
+   * For each pair of cells, it uses the Bresenham's line algorithm to get the coordinates of cells that form a straight line between the pair,
+   * and checks if there is a wall between them. If there is a wall, the second cell is not visible from the first one.
+   * Diagonal vision is allowed, i.e., a cell can "see" another cell diagonally if there is no obstacle in the line of sight.
+   */
+  generateVisibilityMatrixDiagonal(grid: number[][]): any[][] {
+    const visibilityMatrix: any[][] = Array(this.gridSize)
+      .fill(undefined)
+      .map(() =>
+        Array(this.gridSize)
+          .fill(undefined)
+          .map(() => [])
+      );
+
+    const wallMasks = [
+      this.wallMask.T,
+      this.wallMask.R,
+      this.wallMask.B,
+      this.wallMask.L,
+    ];
+
+    // Bresenham's line algorithm
+    function* bresenhamLine(
+      x0: number,
+      y0: number,
+      x1: number,
+      y1: number
+    ): IterableIterator<{ x: number; y: number }> {
+      const dx = Math.abs(x1 - x0);
+      const dy = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1;
+      const sy = y0 < y1 ? 1 : -1;
+      let err = dx - dy;
+
+      while (true) {
+        yield { x: x0, y: y0 };
+
+        if (x0 === x1 && y0 === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) {
+          err -= dy;
+          x0 += sx;
+        }
+        if (e2 < dx) {
+          err += dx;
+          y0 += sy;
+        }
+      }
+    }
+
+    for (let y0 = 0; y0 < this.gridSize; y0++) {
+      for (let x0 = 0; x0 < this.gridSize; x0++) {
+        for (let y1 = 0; y1 < this.gridSize; y1++) {
+          for (let x1 = 0; x1 < this.gridSize; x1++) {
+            let visible = true;
+            for (const point of bresenhamLine(x0, y0, x1, y1)) {
+              if (point.x === x0 && point.y === y0) continue;
+              for (const mask of wallMasks) {
+                if (grid[point.y][point.x] & mask) {
+                  visible = false;
+                  break;
+                }
+              }
+              if (!visible) break;
+            }
+            if (visible) {
+              visibilityMatrix[y0][x0].push({ x: x1, y: y1 });
+            }
+          }
+        }
+      }
+    }
+
+    return visibilityMatrix;
+  }
 }
 
 /**

@@ -30,6 +30,7 @@ export class SSGameEngineClient {
   gridSize: number;
   cellSize: number;
   gameGrid: number[][];
+  visibilityMatrix: any[][];
   TOP = 0b0001;
   RIGHT = 0b0010;
   BOTTOM = 0b0100;
@@ -102,6 +103,7 @@ export class SSGameEngineClient {
     elapsedTime: number,
     roomState: any
   ): void {
+    let gridPos = { x: 0, y: 0 };
     ctx.save();
 
     const thisPlayer = this.playerShips.get(this.playerSessionID);
@@ -110,6 +112,7 @@ export class SSGameEngineClient {
         this.displayWidth / 2 - thisPlayer.rx,
         this.displayHeight / 2 - thisPlayer.ry
       );
+      gridPos = this.gridPosForPoint({ x: thisPlayer.x, y: thisPlayer.y });
     } else {
       ctx.translate(
         (this.displayWidth - this.gameAreaWidth) / 2,
@@ -122,7 +125,7 @@ export class SSGameEngineClient {
 
     // Check that we have recieved the grid from server before rendering
     if (this.gameGrid !== null && this.gameGrid !== undefined) {
-      this.drawGrid(ctx);
+      this.drawGrid(ctx, gridPos);
     }
 
     this.renderUpdateTimestamps.push(elapsedTime);
@@ -185,12 +188,23 @@ export class SSGameEngineClient {
     }
   }
 
-  drawGrid(context: CanvasRenderingContext2D): void {
+  drawGrid(
+    context: CanvasRenderingContext2D,
+    obsGridPos: { x: number; y: number }
+  ): void {
     context.strokeStyle = "black"; // color of the walls
     context.lineWidth = 4; // width of the walls
 
+    const visibilityArray: Array<{ x: number; y: number }> =
+      this.visibilityMatrix[obsGridPos.y][obsGridPos.x];
+
     for (let y = 0; y < this.gameGrid.length; y++) {
       for (let x = 0; x < this.gameGrid[y].length; x++) {
+        let isVisible = false;
+        for (const visiblePt of visibilityArray) {
+          if (visiblePt.x === x && visiblePt.y === y) isVisible = true;
+        }
+
         const cell = this.gameGrid[y][x];
         const xPos = x * this.cellSize;
         const yPos = y * this.cellSize;
@@ -234,12 +248,45 @@ export class SSGameEngineClient {
           cell & this.TOP &&
           cell & this.BOTTOM
         ) {
-          context.fillStyle = "grey";
+          if (isVisible) {
+            context.fillStyle = "grey";
+          } else {
+            context.fillStyle = "blue";
+          }
           context.strokeStyle = "black";
+          context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
+        } else {
+          if (isVisible) {
+            context.fillStyle = "rgb(255,255,255)";
+          } else {
+            context.fillStyle = "rgb(200,200,200)";
+          }
           context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
         }
       }
     }
+  }
+
+  /**
+   * Returns the grid position when passed a coordinate
+   *
+   * @param pt The x y point to be tested
+   * @returns The grid position of that point
+   */
+  gridPosForPoint(pt: { x: number; y: number }): { x: number; y: number } {
+    const returnPos = { x: 0, y: 0 };
+
+    // Find the grid cell that we are currently in
+    returnPos.x = Math.max(
+      0,
+      Math.min(this.gridSize - 1, Math.floor(pt.x / this.cellSize))
+    );
+    returnPos.y = Math.max(
+      0,
+      Math.min(this.gridSize - 1, Math.floor(pt.y / this.cellSize))
+    );
+
+    return returnPos;
   }
 
   /**

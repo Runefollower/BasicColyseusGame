@@ -23,13 +23,14 @@ const SimpleGameMetrics = {
     [0, 0],
     [0, 0],
   ],
+  visibilityMatrix: [],
 };
 
 // Controls for metrics updates
 let nextMinuteUpdate = 0;
 let nextLogMetricsUpdate = 0;
 
-const computerPlayerCount = 2;
+const computerPlayerCount = 0;
 
 /**
  * Main class for the game logic
@@ -53,6 +54,9 @@ export class SimpleGameLogic {
     // Generate a grid from standard 10 X 10 blocks
     SimpleGameMetrics.grid =
       this.gridGen.generateGridFromPredefinedPatterns(false);
+
+    SimpleGameMetrics.visibilityMatrix =
+      this.gridGen.generateVisibilityMatrixDiagonal(SimpleGameMetrics.grid);
 
     for (let i = 0; i < computerPlayerCount; i++) {
       this.addNewComputerPlayer();
@@ -594,32 +598,90 @@ export class SimpleGameLogic {
     vy: number,
     radius: number
   ): { newX: number; newY: number; vx: number; vy: number; hit: boolean } {
-    const newVal = {
+    let newVal = {
       newX,
       newY,
       vx,
       vy,
       hit: false,
     };
-    // Find the grid cell that we are currently in
-    const gridX = Math.max(
-      0,
-      Math.min(
-        SimpleGameMetrics.gridSize - 1,
-        Math.floor(x / SimpleGameMetrics.cellSize)
-      )
-    );
-    const gridY = Math.max(
-      0,
-      Math.min(
-        SimpleGameMetrics.gridSize - 1,
-        Math.floor(y / SimpleGameMetrics.cellSize)
-      )
-    );
-    const gridCell = SimpleGameMetrics.grid[gridY][gridX];
 
+    // Find the grid cell that we are currently in
+    let gridXY = this.gridPosForPoint({ x, y });
+    const gridCellA = SimpleGameMetrics.grid[gridXY.y][gridXY.x];
+    newVal = this.checkGridWallCollision(gridCellA, gridXY, newVal, radius);
+
+    if (!newVal.hit) {
+      // check the grid we are moving into
+      gridXY = this.gridPosForPoint({ x, y });
+      const gridCellB = SimpleGameMetrics.grid[gridXY.y][gridXY.x];
+
+      if (gridCellA !== gridCellB) {
+        newVal = this.checkGridWallCollision(gridCellB, gridXY, newVal, radius);
+
+        if (newVal.hit) {
+          console.log(
+            generateLogWithTimestamp(
+              "Hit found on the second grid..............."
+            )
+          );
+        }
+      }
+    }
+    return newVal;
+  }
+
+  /**
+   * Returns the grid position when passed a coordinate
+   *
+   * @param pt The x y point to be tested
+   * @returns The grid position of that point
+   */
+  gridPosForPoint(pt: { x: number; y: number }): { x: number; y: number } {
+    const returnPos = { x: 0, y: 0 };
+
+    // Find the grid cell that we are currently in
+    returnPos.x = Math.max(
+      0,
+      Math.min(
+        SimpleGameMetrics.gridSize - 1,
+        Math.floor(pt.x / SimpleGameMetrics.cellSize)
+      )
+    );
+    returnPos.y = Math.max(
+      0,
+      Math.min(
+        SimpleGameMetrics.gridSize - 1,
+        Math.floor(pt.y / SimpleGameMetrics.cellSize)
+      )
+    );
+
+    return returnPos;
+  }
+
+  /**
+   * Checks for collisions with a specific grid location walls
+   *
+   * @param gridCell The bitmask value for this cell indicating walls or not on the four sides
+   * @param gridPos The x y position of this grid
+   * @param newVal Holds the position before and after game cycle update
+   * @param radius Collision radius for this entity
+   * @returns
+   */
+  checkGridWallCollision(
+    gridCell: number,
+    gridPos: { x: number; y: number },
+    newVal: {
+      newX: number;
+      newY: number;
+      vx: number;
+      vy: number;
+      hit: boolean;
+    },
+    radius: number
+  ): { newX: number; newY: number; vx: number; vy: number; hit: boolean } {
     // Check for collisions with the left and right
-    const newXinCell = newX - gridX * SimpleGameMetrics.cellSize;
+    const newXinCell = newVal.newX - gridPos.x * SimpleGameMetrics.cellSize;
     if (
       (gridCell & this.gridGen.wallMask.R) !== 0 &&
       newXinCell + radius > SimpleGameMetrics.cellSize
@@ -628,7 +690,7 @@ export class SimpleGameLogic {
       newVal.hit = true;
       newVal.vx = 0; // Stop horizontal movement
       newVal.newX =
-        gridX * SimpleGameMetrics.cellSize +
+        gridPos.x * SimpleGameMetrics.cellSize +
         SimpleGameMetrics.cellSize -
         radius; // Move to the left of the wall
     } else if (
@@ -638,11 +700,11 @@ export class SimpleGameLogic {
       // Collided with left wall
       newVal.hit = true;
       newVal.vx = 0; // Stop horizontal movement
-      newVal.newX = gridX * SimpleGameMetrics.cellSize + radius; // Move to the right of the wall
+      newVal.newX = gridPos.x * SimpleGameMetrics.cellSize + radius; // Move to the right of the wall
     }
 
     // Check for collisions with the top and bottom
-    const newYinCell = newY - gridY * SimpleGameMetrics.cellSize;
+    const newYinCell = newVal.newY - gridPos.y * SimpleGameMetrics.cellSize;
     if (
       (gridCell & this.gridGen.wallMask.B) !== 0 &&
       newYinCell + radius > SimpleGameMetrics.cellSize
@@ -651,7 +713,7 @@ export class SimpleGameLogic {
       newVal.hit = true;
       newVal.vy = 0; // Stop vertical movement
       newVal.newY =
-        gridY * SimpleGameMetrics.cellSize +
+        gridPos.y * SimpleGameMetrics.cellSize +
         SimpleGameMetrics.cellSize -
         radius; // Move above the wall
     } else if (
@@ -661,12 +723,17 @@ export class SimpleGameLogic {
       // Collided with top wall
       newVal.hit = true;
       newVal.vy = 0; // Stop vertical movement
-      newVal.newY = gridY * SimpleGameMetrics.cellSize + radius; // Move below the wall
+      newVal.newY = gridPos.y * SimpleGameMetrics.cellSize + radius; // Move below the wall
     }
 
     return newVal;
   }
 
+  /**
+   * Update diagnostic metrics for this server
+   *
+   * @param elapsedTime Time since start of game
+   */
   updateMetrics(elapsedTime: number): void {
     // Update client count
     this.state.currentClientsCount = this.state.players.size;
