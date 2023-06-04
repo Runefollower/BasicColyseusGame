@@ -106,6 +106,28 @@ export class SettingsController {
   menuItems: Map<string, MenuItem>;
   gameEngine: SSGameEngineClient;
 
+  // Position of the menu relative to top left corner
+  xMenuOffset = 10;
+  yMenuOffset = 10;
+
+  // Size of pulldown box
+  pulldownBoxSize = 20;
+
+  // Size of full menu frame
+  fullMenuWidth = 150;
+  fullMenuHeight = 150;
+
+  // Menu items offset from the left of the menu
+  xMenuItemOffset = 5;
+  yMenuItemOffset = 40;
+
+  // Y spacing for each menu item
+  yMenuItemSpacing = 20;
+
+  // Dimensions of a menu item
+  menuItemHeight = 20;
+  menuItemWidth = 100;
+
   showLabelsKey = "showLabels";
   showMetricsKey = "showMetrics";
   showInstKey = "showInstructions";
@@ -125,9 +147,19 @@ export class SettingsController {
   render(ctx: CanvasRenderingContext2D): void {
     if (!this.showCollapsed) {
       ctx.fillStyle = "rgb(180,180,255)";
-      ctx.fillRect(10, 10, 150, 150);
+      ctx.fillRect(
+        this.xMenuOffset,
+        this.yMenuOffset,
+        this.fullMenuWidth,
+        this.fullMenuHeight
+      );
       ctx.strokeStyle = "rgb(10,10,10)";
-      ctx.strokeRect(10, 10, 150, 150);
+      ctx.strokeRect(
+        this.xMenuOffset,
+        this.yMenuOffset,
+        this.fullMenuWidth,
+        this.fullMenuHeight
+      );
       this.drawMenu(ctx);
     }
     this.drawPulldownButton(ctx);
@@ -142,20 +174,35 @@ export class SettingsController {
 
   drawPulldownButton(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = "rgb(250,180,180)";
-    ctx.fillRect(10, 10, 14, 14);
+    ctx.fillRect(
+      this.xMenuOffset,
+      this.yMenuOffset,
+      this.pulldownBoxSize,
+      this.pulldownBoxSize
+    );
     ctx.strokeStyle = "rgb(10,10,10)";
     ctx.lineWidth = 1;
-    ctx.strokeRect(10, 10, 14, 14);
+    ctx.strokeRect(
+      this.xMenuOffset,
+      this.yMenuOffset,
+      this.pulldownBoxSize,
+      this.pulldownBoxSize
+    );
 
     ctx.beginPath();
+    const lX = this.xMenuOffset + this.pulldownBoxSize * 0.2;
+    const mX = this.xMenuOffset + this.pulldownBoxSize * 0.5;
+    const rX = this.xMenuOffset + this.pulldownBoxSize * 0.8;
+    const tY = this.yMenuOffset + this.pulldownBoxSize * 0.2;
+    const bY = this.yMenuOffset + this.pulldownBoxSize * 0.8;
     if (this.showCollapsed) {
-      ctx.moveTo(14, 14);
-      ctx.lineTo(17, 20);
-      ctx.lineTo(20, 14);
+      ctx.moveTo(lX, tY);
+      ctx.lineTo(mX, bY);
+      ctx.lineTo(rX, tY);
     } else {
-      ctx.moveTo(14, 20);
-      ctx.lineTo(17, 14);
-      ctx.lineTo(20, 20);
+      ctx.moveTo(lX, bY);
+      ctx.lineTo(mX, tY);
+      ctx.lineTo(rX, bY);
     }
     ctx.stroke();
   }
@@ -166,17 +213,21 @@ export class SettingsController {
         item.clickEvent(x, y);
       }
     }
-    if (x > 10 && x < 24 && y > 10 && y < 24) {
+    if (
+      x > this.xMenuOffset &&
+      x < this.xMenuOffset + this.pulldownBoxSize &&
+      y > this.yMenuOffset &&
+      y < this.yMenuOffset + this.pulldownBoxSize
+    ) {
       this.showCollapsed = !this.showCollapsed;
     }
   }
 
   addMenuItem(key: string, menuItem: MenuItem): void {
-    const x = 15;
-    const height = 20;
-    const width = 100;
-    const y = 40 + this.menuItems.size * 20; // calculate y based on the number of existing items
-    menuItem.setPosition(x, y, height, width);
+    const x = this.xMenuOffset + this.xMenuItemOffset;
+    const y =
+      this.yMenuItemOffset + this.menuItems.size * this.yMenuItemSpacing; // calculate y based on the number of existing items
+    menuItem.setPosition(x, y, this.menuItemHeight, this.menuItemWidth);
     this.menuItems.set(key, menuItem);
   }
 
