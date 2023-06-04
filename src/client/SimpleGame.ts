@@ -143,6 +143,9 @@ function updateSettings(): void {
   gameEngine.showInstructions = settingsController.getMenuItemBoolValue(
     settingsController.showInstKey
   );
+  gameEngine.hideInvisible = settingsController.getMenuItemBoolValue(
+    settingsController.hideInviKey
+  );
 
   if (isTouchInterface) {
     touchInterface.joystickPositionInverted =

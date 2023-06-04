@@ -63,6 +63,9 @@ export class SSGameEngineClient {
   serverUpdateTimestamps: number[];
   updatesPerSecond: number = 0.0;
 
+  // Hide invisble parts of the map
+  hideInvisible = true;
+
   constructor() {
     this.ssRenderer = new SpaceShipRender();
 
@@ -103,6 +106,8 @@ export class SSGameEngineClient {
     elapsedTime: number,
     roomState: any
   ): void {
+    if (this.visibilityMatrix === undefined) return;
+
     let gridPos = { x: 0, y: 0 };
     ctx.save();
 
@@ -118,7 +123,14 @@ export class SSGameEngineClient {
         (this.displayWidth - this.gameAreaWidth) / 2,
         (this.displayHeight - this.gameAreaHeight) / 2
       );
+      gridPos = this.gridPosForPoint({
+        x: (this.displayWidth - this.gameAreaWidth) / 2,
+        y: (this.displayHeight - this.gameAreaHeight) / 2,
+      });
     }
+
+    const visibilityArray: Array<{ x: number; y: number }> =
+      this.visibilityMatrix[gridPos.y][gridPos.x];
 
     ctx.fillStyle = "rgb(255 255 255)";
     ctx.fillRect(0, 0, this.gameAreaWidth, this.gameAreaHeight);
@@ -140,24 +152,36 @@ export class SSGameEngineClient {
     for (const playerShip of this.playerShips.values()) {
       const color =
         playerShip.sessionId === this.playerSessionID ? "blue" : "red";
-      this.ssRenderer.render(
-        // playerShip.x + playerShip.vx * udt,
-        // playerShip.y + playerShip.vy * udt,
-        playerShip.rx,
-        playerShip.ry,
-        playerShip.vx,
-        playerShip.vy,
-        playerShip.direction,
-        color,
-        playerShip.accel,
-        ctx,
-        playerShip.name,
-        this.showPlayerLabels,
-        true,
-        playerShip.health,
-        playerShip.maxHealth,
-        playerShip.shipType
-      );
+
+      // Can this player be seen
+      let isVisible = true;
+      if (playerShip.sessionId !== this.playerSessionID) {
+        isVisible = this.canSeePoint(visibilityArray, {
+          x: playerShip.x,
+          y: playerShip.y,
+        });
+      }
+
+      if (isVisible) {
+        this.ssRenderer.render(
+          // playerShip.x + playerShip.vx * udt,
+          // playerShip.y + playerShip.vy * udt,
+          playerShip.rx,
+          playerShip.ry,
+          playerShip.vx,
+          playerShip.vy,
+          playerShip.direction,
+          color,
+          playerShip.accel,
+          ctx,
+          playerShip.name,
+          this.showPlayerLabels,
+          true,
+          playerShip.health,
+          playerShip.maxHealth,
+          playerShip.shipType
+        );
+      }
     }
 
     roomState.lasers.forEach((laser) => {
@@ -166,12 +190,19 @@ export class SSGameEngineClient {
       const lvx: number = laser.vx;
       const lvy: number = laser.vy;
 
-      this.ssRenderer.renderLaser(
-        lx + lvx * udt,
-        ly + lvy * udt,
-        laser.direction,
-        ctx
-      );
+      if (
+        this.canSeePoint(visibilityArray, {
+          x: lx,
+          y: ly,
+        })
+      ) {
+        this.ssRenderer.renderLaser(
+          lx + lvx * udt,
+          ly + lvy * udt,
+          laser.direction,
+          ctx
+        );
+      }
     });
 
     ctx.restore();
@@ -186,6 +217,21 @@ export class SSGameEngineClient {
     if (this.showInstructions) {
       this.renderInstructions(ctx);
     }
+  }
+
+  canSeePoint(
+    visibilityArray: Array<{ x: number; y: number }>,
+    pt: { x: number; y: number }
+  ): boolean {
+    const gridPos = this.gridPosForPoint(pt);
+
+    let isVisible = false;
+    for (const visiblePt of visibilityArray) {
+      if (visiblePt.x === gridPos.x && visiblePt.y === gridPos.y)
+        isVisible = true;
+    }
+
+    return isVisible;
   }
 
   drawGrid(
@@ -251,7 +297,11 @@ export class SSGameEngineClient {
           if (isVisible) {
             context.fillStyle = "grey";
           } else {
-            context.fillStyle = "rgb(180,180,180)";
+            if (this.hideInvisible) {
+              context.fillStyle = "black";
+            } else {
+              context.fillStyle = "rgb(180,180,180)";
+            }
           }
           context.strokeStyle = "black";
           context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
@@ -259,7 +309,11 @@ export class SSGameEngineClient {
           if (isVisible) {
             context.fillStyle = "rgb(255,255,255)";
           } else {
-            context.fillStyle = "rgb(240,240,240)";
+            if (this.hideInvisible) {
+              context.fillStyle = "black";
+            } else {
+              context.fillStyle = "rgb(240,240,240)";
+            }
           }
           context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
         }

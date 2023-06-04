@@ -132,6 +132,7 @@ export class SettingsController {
   showMetricsKey = "showMetrics";
   showInstKey = "showInstructions";
   invertJoyKey = "invertMetrics";
+  hideInviKey = "hideInvisible";
 
   constructor(gameEngine: SSGameEngineClient) {
     this.showCollapsed = true;
@@ -142,6 +143,7 @@ export class SettingsController {
     this.addCheckMenuItem(this.showLabelsKey, "Show Labels", false);
     this.addCheckMenuItem(this.showMetricsKey, "Show Metrics", false);
     this.addCheckMenuItem(this.showInstKey, "Show Instructions", false);
+    this.addCheckMenuItem(this.hideInviKey, "Hide Invisible", true);
   }
 
   render(ctx: CanvasRenderingContext2D): void {
