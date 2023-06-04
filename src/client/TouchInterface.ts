@@ -13,10 +13,15 @@ export class TouchInterface {
   joystickLeft: boolean;
   joystickDown: boolean;
 
+  joystickPositionInverted: boolean;
+
   maxDistance: number;
   deadZone: number;
 
   room: Colyseus.Room;
+
+  joystickR: nipplejs.JoystickManager;
+  joystickL: nipplejs.JoystickManager;
 
   constructor() {
     this.joystickUP = false;
@@ -26,6 +31,8 @@ export class TouchInterface {
 
     this.maxDistance = 50;
     this.deadZone = 0.1 * this.maxDistance;
+
+    this.joystickPositionInverted = false;
   }
 
   /**
@@ -67,11 +74,7 @@ export class TouchInterface {
       color: "blue",
     };
 
-    const joystickR = nipplejs.create(optionsR);
-
-    // Event handlers for movement joystick
-    joystickR.on("move", this.movementJoyProportionalMoveHandler.bind(this));
-    joystickR.on("end", this.movementJoyEndHandler.bind(this));
+    this.joystickR = nipplejs.create(optionsR);
 
     // Create the fire joystick, this will aim in Tank mode
     // and turn on wepon fire
@@ -83,11 +86,60 @@ export class TouchInterface {
       color: "blue",
     };
 
-    const joystickL = nipplejs.create(optionsL);
+    this.joystickL = nipplejs.create(optionsL);
+
+    this.bindJoystickEventHandlers();
+  }
+
+  /**
+   * Bind the event listeners to the right joysticks
+   */
+  bindJoystickEventHandlers(): void {
+    // Event handlers for movement joystick
+    this.joystickR.on("move", (evt, data) => {
+      this.rlJoyMoveHandler(true, evt, data);
+    });
+    this.joystickR.on("end", (evt, data) => {
+      this.rlJoyEndHandler(true, evt, data);
+    });
 
     // Event handlers for fire joystick
-    joystickL.on("move", this.fireJoyMoveHandler.bind(this));
-    joystickL.on("end", this.fireJoyEndHandler.bind(this));
+    this.joystickL.on("move", (evt, data) => {
+      this.rlJoyMoveHandler(false, evt, data);
+    });
+    this.joystickL.on("end", (evt, data) => {
+      this.rlJoyEndHandler(false, evt, data);
+    });
+  }
+
+  rlJoyMoveHandler(
+    isRight: boolean,
+    evt: nipplejs.EventData,
+    data: nipplejs.JoystickOutputData
+  ): void {
+    if (
+      (isRight && this.joystickPositionInverted) ||
+      (!isRight && !this.joystickPositionInverted)
+    ) {
+      this.fireJoyMoveHandler(evt, data);
+    } else {
+      this.movementJoyPropMoveHandler(evt, data);
+    }
+  }
+
+  rlJoyEndHandler(
+    isRight: boolean,
+    evt: nipplejs.EventData,
+    data: nipplejs.JoystickOutputData
+  ): void {
+    if (
+      (isRight && this.joystickPositionInverted) ||
+      (!isRight && !this.joystickPositionInverted)
+    ) {
+      this.fireJoyEndHandler(evt, data);
+    } else {
+      this.movementJoyEndHandler(evt, data);
+    }
   }
 
   /**
@@ -96,7 +148,7 @@ export class TouchInterface {
    * @param evt Event data
    * @param data Joystick parameters
    */
-  movementJoyProportionalMoveHandler(
+  movementJoyPropMoveHandler(
     evt: nipplejs.EventData,
     data: nipplejs.JoystickOutputData
   ): void {

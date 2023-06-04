@@ -103,47 +103,46 @@ class CallbackMenuItem extends MenuItem {
 
 export class SettingsController {
   showCollapsed: boolean;
-  menuItems: MenuItem[];
+  menuItems: Map<string, MenuItem>;
   gameEngine: SSGameEngineClient;
+
+  showLabelsKey = "showLabels";
+  showMetricsKey = "showMetrics";
+  showInstKey = "showInstructions";
+  invertJoyKey = "invertMetrics";
 
   constructor(gameEngine: SSGameEngineClient) {
     this.showCollapsed = true;
     this.gameEngine = gameEngine;
 
-    this.menuItems = [
-      new CheckMenuItem("Show Labels", false),
-      new CheckMenuItem("Show Metrics", false),
-      new CheckMenuItem("Show Instructions", false),
-    ];
+    this.menuItems = new Map<string, MenuItem>();
 
-    const x = 15;
-    const height = 20;
-    const width = 100;
-
-    let y = 40;
-    for (const item of this.menuItems) {
-      item.setPosition(x, y, height, width);
-      y += 20; // increment y by 20 for each item
-    }
+    this.addCheckMenuItem(this.showLabelsKey, "Show Labels", false);
+    this.addCheckMenuItem(this.showMetricsKey, "Show Metrics", false);
+    this.addCheckMenuItem(this.showInstKey, "Show Instructions", false);
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    this.drawPulldownButton(ctx);
     if (!this.showCollapsed) {
+      ctx.fillStyle = "rgb(180,180,255)";
+      ctx.fillRect(10, 10, 150, 150);
       ctx.strokeStyle = "rgb(10,10,10)";
-      ctx.strokeRect(10, 10, 120, 120);
+      ctx.strokeRect(10, 10, 150, 150);
       this.drawMenu(ctx);
     }
+    this.drawPulldownButton(ctx);
   }
 
   drawMenu(ctx: CanvasRenderingContext2D): void {
     ctx.font = "12px Courier";
-    for (const item of this.menuItems) {
+    for (const item of this.menuItems.values()) {
       item.render(ctx);
     }
   }
 
   drawPulldownButton(ctx: CanvasRenderingContext2D): void {
+    ctx.fillStyle = "rgb(250,180,180)";
+    ctx.fillRect(10, 10, 14, 14);
     ctx.strokeStyle = "rgb(10,10,10)";
     ctx.lineWidth = 1;
     ctx.strokeRect(10, 10, 14, 14);
@@ -163,26 +162,39 @@ export class SettingsController {
 
   clickEvent(x: number, y: number): void {
     if (!this.showCollapsed) {
-      for (const item of this.menuItems) {
+      for (const item of this.menuItems.values()) {
         item.clickEvent(x, y);
       }
     }
     if (x > 10 && x < 24 && y > 10 && y < 24) {
       this.showCollapsed = !this.showCollapsed;
     }
-
-    this.gameEngine.showPlayerLabels = this.menuItems[0].getBoolValue();
-    this.gameEngine.showServerMetrics = this.menuItems[1].getBoolValue();
-    this.gameEngine.showInstructions = this.menuItems[2].getBoolValue();
   }
 
-  addCallbackMenuItem(text: string, callback: () => void): void {
-    const newItem = new CallbackMenuItem(text, callback);
+  addMenuItem(key: string, menuItem: MenuItem): void {
     const x = 15;
     const height = 20;
     const width = 100;
-    const y = 40 + this.menuItems.length * 20; // calculate y based on the number of existing items
-    newItem.setPosition(x, y, height, width);
-    this.menuItems.push(newItem);
+    const y = 40 + this.menuItems.size * 20; // calculate y based on the number of existing items
+    menuItem.setPosition(x, y, height, width);
+    this.menuItems.set(key, menuItem);
+  }
+
+  addCallbackMenuItem(key: string, text: string, callback: () => void): void {
+    const newItem = new CallbackMenuItem(text, callback);
+    this.addMenuItem(key, newItem);
+  }
+
+  getMenuItemBoolValue(key: string): boolean {
+    const menuItem: MenuItem | undefined = this.menuItems.get(key);
+    if (menuItem === undefined) {
+      return false;
+    } else {
+      return menuItem.getBoolValue();
+    }
+  }
+
+  addCheckMenuItem(key: string, label: string, initValue: boolean): void {
+    this.addMenuItem(key, new CheckMenuItem(label, initValue));
   }
 }

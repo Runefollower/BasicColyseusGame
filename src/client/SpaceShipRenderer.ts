@@ -143,7 +143,10 @@ export class SpaceShipRender {
     shipType: string
   ): void {
     const sType = this.shipDesignsMap.get(shipType);
-    if (sType === undefined) throw Error("Ship type not found :" + shipType);
+    if (sType === undefined) {
+      console.error("Ship type not found :" + shipType);
+      return;
+    }
 
     ctx.save();
     ctx.translate(x, y);

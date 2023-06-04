@@ -45,9 +45,12 @@ let inputBack = false;
 let inputRight = false;
 let inputLeft = false;
 
+let isTouchInterface = false;
+
 // If we are in a touch interface, set up the touch controls
 if ("ontouchstart" in window) {
   touchInterface.initMobileUI(moveZone, fireZone);
+  isTouchInterface = true;
 }
 
 /**
@@ -55,6 +58,9 @@ if ("ontouchstart" in window) {
  * engine an opportunity to update and then rendering the scene
  */
 function render(): void {
+  // update any settings from the menu
+  updateSettings();
+
   // error checking for null on the context
   if (ctx !== null) {
     // Capture current time, time since server update and time
@@ -107,10 +113,41 @@ function gameServerInit(message: any): void {
   gameEngine.displayHeight = canvas.height;
 }
 
+// Add menu item to toggle the ship
 function toggleClientShip(): void {
   room.send("input", "change-type");
 }
-settingsController.addCallbackMenuItem("Toggle Ship", toggleClientShip);
+settingsController.addCallbackMenuItem(
+  "toggleShip",
+  "Toggle Ship",
+  toggleClientShip
+);
+
+// Add menu item to flip the joysticks
+if (isTouchInterface) {
+  settingsController.addCheckMenuItem(
+    settingsController.invertJoyKey,
+    "Flip Joysticks",
+    touchInterface.joystickPositionInverted
+  );
+}
+
+function updateSettings(): void {
+  gameEngine.showPlayerLabels = settingsController.getMenuItemBoolValue(
+    settingsController.showLabelsKey
+  );
+  gameEngine.showServerMetrics = settingsController.getMenuItemBoolValue(
+    settingsController.showMetricsKey
+  );
+  gameEngine.showInstructions = settingsController.getMenuItemBoolValue(
+    settingsController.showInstKey
+  );
+
+  if (isTouchInterface) {
+    touchInterface.joystickPositionInverted =
+      settingsController.getMenuItemBoolValue(settingsController.invertJoyKey);
+  }
+}
 
 /**
  * Called when the game state is updated from the server
