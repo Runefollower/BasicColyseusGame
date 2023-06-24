@@ -37,9 +37,11 @@ const SpaceShip: ShipType = {
     },
   ],
   firesLasers: true,
+  firesCannonballs: false,
   controlType: controlTypes.rocketShip,
   hasFlame: true,
   collisionRadius: 10,
+  fireDelayInterval: 200,
 };
 
 // Instantiate the SpaceShip design
@@ -68,10 +70,12 @@ const Tank: ShipType = {
     },
   ],
   flames: [],
-  firesLasers: true,
+  firesLasers: false,
+  firesCannonballs: true,
   controlType: controlTypes.tank,
   hasFlame: false,
   collisionRadius: 20,
+  fireDelayInterval: 700,
 };
 
 // Export the ship designs for serialization to client

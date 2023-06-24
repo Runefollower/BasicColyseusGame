@@ -64,7 +64,7 @@ export class Player extends Schema {
   }
 }
 
-export class Laser extends Schema {
+export class Projectile extends Schema {
   @type("number")
   x: number;
 
@@ -86,13 +86,17 @@ export class Laser extends Schema {
   @type("string")
   ownerSessionId: string;
 
+  @type("number")
+  projectileType: number;
+
   constructor(
     x: number,
     y: number,
     vx: number,
     vy: number,
     direction: number,
-    ownerSessionId: string
+    ownerSessionId: string,
+    projectileType: number
   ) {
     super();
     this.x = x;
@@ -102,6 +106,7 @@ export class Laser extends Schema {
     this.direction = direction;
     this.ownerSessionId = ownerSessionId;
     this.remainingTime = 1000;
+    this.projectileType = projectileType;
   }
 }
 
@@ -109,8 +114,8 @@ export class GameState extends Schema {
   @type({ map: Player })
   players = new MapSchema<Player>();
 
-  @type([Laser])
-  lasers = new ArraySchema<Laser>();
+  @type([Projectile])
+  projectiles = new ArraySchema<Projectile>();
 
   // Server-side metrics
   @type("number")

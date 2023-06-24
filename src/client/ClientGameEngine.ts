@@ -1,6 +1,11 @@
 import { PlayerShip } from "./GameEntities";
 import { SpaceShipRender } from "./SpaceShipRenderer";
 
+export const projectileTypes = {
+  Laser: 1,
+  Cannonball: 2,
+};
+
 export class SSGameEngineClient {
   // Map of active ships
   playerShips = new Map<string, PlayerShip>();
@@ -184,11 +189,11 @@ export class SSGameEngineClient {
       }
     }
 
-    roomState.lasers.forEach((laser) => {
-      const lx: number = laser.x;
-      const ly: number = laser.y;
-      const lvx: number = laser.vx;
-      const lvy: number = laser.vy;
+    roomState.projectiles.forEach((projectile) => {
+      const lx: number = projectile.x;
+      const ly: number = projectile.y;
+      const lvx: number = projectile.vx;
+      const lvy: number = projectile.vy;
 
       if (
         this.canSeePoint(visibilityArray, {
@@ -196,12 +201,16 @@ export class SSGameEngineClient {
           y: ly,
         })
       ) {
-        this.ssRenderer.renderLaser(
-          lx + lvx * udt,
-          ly + lvy * udt,
-          laser.direction,
-          ctx
-        );
+        if (projectile.projectileType === projectileTypes.Laser) {
+          this.ssRenderer.renderLaser(
+            lx + lvx * udt,
+            ly + lvy * udt,
+            projectile.direction,
+            ctx
+          );
+        } else if (projectile.projectileType === projectileTypes.Cannonball) {
+          this.ssRenderer.renderCannonball(lx + lvx * udt, ly + lvy * udt, ctx);
+        }
       }
     });
 

@@ -1,9 +1,10 @@
 import { type Client } from "colyseus";
-import { type GameState, Player, Laser } from "./GameState";
+import { type GameState, Player, Projectile } from "./GameState";
 import { generateLogWithTimestamp } from "./ServerTools";
 import { GameGridGenerator } from "./GameGridGenerator";
 import { ComputerPlayer } from "./ComputerPlayer";
 import { ShipDesigns, ShipDesignsMap, controlTypes } from "./ShipDesigns";
+import { projectileTypes } from "./ShipDesignTypes";
 
 // Controls for metrics updates
 let nextMinuteUpdate = 0;
@@ -387,21 +388,37 @@ export class SimpleGameLogic {
       // if the player is in firing mode, see if we can generate a new fire event
       if (
         player.firing &&
-        elapsedTime - player.lastFired >=
-          this.SimpleGameMetrics.fireDelayInterval
+        elapsedTime - player.lastFired >= playerType.fireDelayInterval
       ) {
-        this.state.lasers.push(
-          new Laser(
-            player.x + Math.cos(player.direction) * playerRadius,
-            player.y + Math.sin(player.direction) * playerRadius,
-            Math.cos(player.direction) * this.SimpleGameMetrics.laserSpeed +
-              player.vx,
-            Math.sin(player.direction) * this.SimpleGameMetrics.laserSpeed +
-              player.vy,
-            player.direction,
-            sessionId
-          )
-        );
+        if (playerType.firesLasers) {
+          this.state.projectiles.push(
+            new Projectile(
+              player.x + Math.cos(player.direction) * playerRadius,
+              player.y + Math.sin(player.direction) * playerRadius,
+              Math.cos(player.direction) * this.SimpleGameMetrics.laserSpeed +
+                player.vx,
+              Math.sin(player.direction) * this.SimpleGameMetrics.laserSpeed +
+                player.vy,
+              player.direction,
+              sessionId,
+              projectileTypes.Laser
+            )
+          );
+        } else if (playerType.firesCannonballs) {
+          this.state.projectiles.push(
+            new Projectile(
+              player.x + Math.cos(player.direction) * playerRadius,
+              player.y + Math.sin(player.direction) * playerRadius,
+              Math.cos(player.direction) * this.SimpleGameMetrics.laserSpeed +
+                player.vx,
+              Math.sin(player.direction) * this.SimpleGameMetrics.laserSpeed +
+                player.vy,
+              player.direction,
+              sessionId,
+              projectileTypes.Cannonball
+            )
+          );
+        }
         player.lastFired = elapsedTime;
       }
 
@@ -431,7 +448,7 @@ export class SimpleGameLogic {
    * @param laser
    * @returns
    */
-  laserHit(player: Player, laser: Laser): boolean {
+  laserHit(player: Player, laser: Projectile): boolean {
     const playerType = ShipDesignsMap.get(player.shipType);
     if (playerType === undefined) {
       console.error(
@@ -462,7 +479,7 @@ export class SimpleGameLogic {
   updateAndTimeLaser(
     deltaTime: number,
     elapsedTime: number,
-    laser: Laser
+    laser: Projectile
   ): boolean {
     const newX = laser.x + laser.vx * deltaTime;
     const newY = laser.y + laser.vy * deltaTime;
@@ -510,12 +527,12 @@ export class SimpleGameLogic {
 
     // Update laser positions and reduce remaining time
     // remove if the time limit is hit or it hit a wall
-    this.state.lasers = this.state.lasers.filter((laser) => {
+    this.state.projectiles = this.state.projectiles.filter((laser) => {
       return this.updateAndTimeLaser(deltaTime, elapsedTime, laser);
     });
 
     // Check for collisions between lasers and ships
-    for (const laser of this.state.lasers) {
+    for (const laser of this.state.projectiles) {
       for (const player of this.state.players.values()) {
         if (this.laserHit(player, laser)) {
           // Laser hit a ship
@@ -531,7 +548,10 @@ export class SimpleGameLogic {
             player.health -= this.SimpleGameMetrics.laserDamage;
 
             // Remove the laser
-            this.state.lasers.splice(this.state.lasers.indexOf(laser), 1);
+            this.state.projectiles.splice(
+              this.state.projectiles.indexOf(laser),
+              1
+            );
 
             // Was this a kill?
             if (player.health <= 0) {

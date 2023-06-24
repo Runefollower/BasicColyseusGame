@@ -300,4 +300,14 @@ export class SpaceShipRender {
     ctx.lineTo(x, y);
     ctx.stroke();
   }
+
+  renderCannonball(x: number, y: number, ctx: CanvasRenderingContext2D): void {
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, 2 * Math.PI);
+    ctx.fillStyle = this.selectFillColor("blue");
+    ctx.strokeStyle = this.selectStrokeColor("blue");
+    ctx.lineWidth = 3;
+    ctx.fill();
+    ctx.stroke();
+  }
 }

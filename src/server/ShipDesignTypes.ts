@@ -31,7 +31,14 @@ export interface ShipType {
   shapes: Shape[]; // Geometric shapes for the ship's body
   flames: Shape[]; // Geometric shapes for the flames
   firesLasers: boolean; // Does the ship fire lasers?
+  firesCannonballs: boolean; // Does the ship fire cannonballs?
   controlType: string; // The control mechanism for the ship, e.g., "TurnAndAccelerate"
   hasFlame: boolean; // Does this ship render a flame
   collisionRadius: number; // Size of this ship for collision detection
+  fireDelayInterval: number; // Fire interval
 }
+
+export const projectileTypes = {
+  Laser: 1,
+  Cannonball: 2,
+};
