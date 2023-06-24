@@ -53,6 +53,15 @@ if ("ontouchstart" in window) {
   isTouchInterface = true;
 }
 
+// Disable context menu on touch interfaces
+function disableContextMenu(event: MouseEvent): void {
+  event.preventDefault();
+}
+canvas.addEventListener("contextmenu", disableContextMenu);
+gameDiv.addEventListener("contextmenu", disableContextMenu);
+moveZone.addEventListener("contextmenu", disableContextMenu);
+fireZone.addEventListener("contextmenu", disableContextMenu);
+
 /**
  * Main render loop, grabbing the timestamps, giving the game
  * engine an opportunity to update and then rendering the scene
