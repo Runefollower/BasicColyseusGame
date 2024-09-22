@@ -19,8 +19,358 @@ export class GameGridGenerator {
 
   gridSize: number = 30;
 
-  constructor(gridSize: number) {
+  // New parameters for procedural cave generation
+  fillProbability: number; // Probability to start a cell as open
+  smoothingIterations: number;
+  minOpeningWidth: number;
+  maxCaveSize: number;
+
+  constructor(
+    gridSize: number,
+    fillProbability: number = 0.45,
+    smoothingIterations: number = 4,
+    minOpeningWidth: number = 2,
+    maxCaveSize: number = 500
+  ) {
     this.gridSize = gridSize;
+    this.fillProbability = fillProbability;
+    this.smoothingIterations = smoothingIterations;
+    this.minOpeningWidth = minOpeningWidth;
+    this.maxCaveSize = maxCaveSize;
+  }
+
+  /**
+   * Generates a procedurally generated cave-like grid
+   *
+   * @returns A procedurally generated cave grid
+   */
+  generateCaveGrid(): number[][] {
+    // Initialize grid with walls
+    let grid: number[][] = Array(this.gridSize)
+      .fill(undefined)
+      .map(() => Array(this.gridSize).fill(0b1111)); // Start with all walls
+
+    // Step 1: Randomly carve out initial open spaces
+    for (let y = 1; y < this.gridSize - 1; y++) {
+      for (let x = 1; x < this.gridSize - 1; x++) {
+        if (Math.random() < this.fillProbability) {
+          grid[y][x] = 0b0000; // Open cell
+        }
+      }
+    }
+
+    // Step 2: Apply Cellular Automata smoothing
+    for (let i = 0; i < this.smoothingIterations; i++) {
+      grid = this.smoothGrid(grid);
+    }
+
+    // Step 3: Ensure minimal opening width
+    grid = this.ensureMinOpeningWidth(grid, this.minOpeningWidth);
+
+    // Step 4: Limit cave region sizes
+    grid = this.limitCaveSize(grid, this.maxCaveSize);
+
+    // Step 5: Ensure all cave regions are connected
+    grid = this.ensureConnectivity(grid);
+
+    // Populate outer walls
+    this.populateOuterWalls(grid);
+
+    // Match walls between adjacent cells
+    this.matchWalls(grid);
+
+    return grid;
+  }
+
+  /**
+   * Applies Cellular Automata rules to smooth the grid
+   *
+   * @param grid The current grid
+   * @returns The smoothed grid
+   */
+  private smoothGrid(grid: number[][]): number[][] {
+    const newGrid = grid.map((row) => row.slice());
+
+    for (let y = 1; y < this.gridSize - 1; y++) {
+      for (let x = 1; x < this.gridSize - 1; x++) {
+        let walls = 0;
+        // Check all 8 neighbors
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dy === 0 && dx === 0) continue;
+            walls += grid[y + dy][x + dx] === 0b1111 ? 1 : 0;
+          }
+        }
+
+        if (walls > 4) {
+          newGrid[y][x] = 0b1111; // Wall
+        } else if (walls < 3) {
+          newGrid[y][x] = 0b0000; // Open
+        }
+        // Otherwise, keep the current state
+      }
+    }
+
+    return newGrid;
+  }
+
+  /**
+   * Ensures that all openings in the cave meet the minimal opening width
+   *
+   * @param grid The current grid
+   * @param minWidth The minimal width for openings
+   * @returns The modified grid
+   */
+  private ensureMinOpeningWidth(
+    grid: number[][],
+    minWidth: number
+  ): number[][] {
+    // This function can be implemented based on specific requirements.
+    // For simplicity, we'll ensure that there are no single-cell-wide passages.
+
+    for (let y = 1; y < this.gridSize - 1; y++) {
+      for (let x = 1; x < this.gridSize - 1; x++) {
+        if (grid[y][x] === 0b0000) {
+          // Check surrounding cells to ensure minimal width
+          let openNeighbors = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dy === 0 && dx === 0) continue;
+              if (grid[y + dy][x + dx] === 0b0000) {
+                openNeighbors++;
+              }
+            }
+          }
+          if (openNeighbors < minWidth) {
+            // Convert to wall if not enough open neighbors
+            grid[y][x] = 0b1111;
+          }
+        }
+      }
+    }
+
+    return grid;
+  }
+
+  /**
+   * Limits the size of cave regions to a maximum size
+   *
+   * @param grid The current grid
+   * @param maxSize The maximum allowed size for a cave region
+   * @returns The modified grid
+   */
+  private limitCaveSize(grid: number[][], maxSize: number): number[][] {
+    const visited = Array(this.gridSize)
+      .fill(false)
+      .map(() => Array(this.gridSize).fill(false));
+
+    const regions: number[][][] = [];
+
+    // Flood fill to identify regions
+    for (let y = 1; y < this.gridSize - 1; y++) {
+      for (let x = 1; x < this.gridSize - 1; x++) {
+        if (!visited[y][x] && grid[y][x] === 0b0000) {
+          const region: number[][] = [];
+          const queue: Array<{ x: number; y: number }> = [{ x, y }];
+          visited[y][x] = true;
+
+          while (queue.length > 0) {
+            const { x: cx, y: cy } = queue.pop()!;
+            region.push([cx, cy]);
+
+            // Check 4-directionally
+            const directions = [
+              { dx: 0, dy: -1 },
+              { dx: 1, dy: 0 },
+              { dx: 0, dy: 1 },
+              { dx: -1, dy: 0 },
+            ];
+
+            for (const { dx, dy } of directions) {
+              const nx = cx + dx;
+              const ny = cy + dy;
+              if (
+                nx > 0 &&
+                nx < this.gridSize - 1 &&
+                ny > 0 &&
+                ny < this.gridSize - 1 &&
+                !visited[ny][nx] &&
+                grid[ny][nx] === 0b0000
+              ) {
+                visited[ny][nx] = true;
+                queue.push({ x: nx, y: ny });
+              }
+            }
+          }
+
+          regions.push(region);
+        }
+      }
+    }
+
+    // Sort regions by size descending
+    regions.sort((a, b) => b.length - a.length);
+
+    // Keep the largest regions within the maxSize
+    for (let i = 0; i < regions.length; i++) {
+      const region = regions[i];
+      if (region.length > maxSize) {
+        // Convert excess cells to walls
+        for (let j = maxSize; j < region.length; j++) {
+          const [x, y] = region[j];
+          grid[y][x] = 0b1111;
+        }
+      }
+    }
+
+    return grid;
+  }
+
+  /**
+   * Ensures that all cave regions are connected
+   *
+   * @param grid The current grid
+   * @returns The modified grid with all regions connected
+   */
+  private ensureConnectivity(grid: number[][]): number[][] {
+    const visited = Array(this.gridSize)
+      .fill(false)
+      .map(() => Array(this.gridSize).fill(false));
+
+    const queue: Array<{ x: number; y: number }> = [{ x: 1, y: 1 }];
+    visited[1][1] = true;
+
+    while (queue.length > 0) {
+      const { x, y } = queue.pop()!;
+
+      // Check 4-directionally
+      const directions = [
+        { dx: 0, dy: -1 },
+        { dx: 1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: -1, dy: 0 },
+      ];
+
+      for (const { dx, dy } of directions) {
+        const nx = x + dx;
+        const ny = y + dy;
+
+        if (
+          nx > 0 &&
+          nx < this.gridSize - 1 &&
+          ny > 0 &&
+          ny < this.gridSize - 1 &&
+          grid[ny][nx] === 0b0000 &&
+          !visited[ny][nx]
+        ) {
+          visited[ny][nx] = true;
+          queue.push({ x: nx, y: ny });
+        }
+      }
+    }
+
+    // Find disconnected regions and connect them
+    for (let y = 1; y < this.gridSize - 1; y++) {
+      for (let x = 1; x < this.gridSize - 1; x++) {
+        if (grid[y][x] === 0b0000 && !visited[y][x]) {
+          // Find the nearest connected cell
+          const path = this.findPath(grid, x, y, visited);
+          if (path.length > 0) {
+            // Carve the path
+            for (const { x: px, y: py } of path) {
+              grid[py][px] = 0b0000;
+              visited[py][px] = true;
+            }
+          }
+        }
+      }
+    }
+
+    return grid;
+  }
+
+  /**
+   * Finds a path from a disconnected cell to the nearest connected region
+   *
+   * @param grid The grid
+   * @param startX The starting x coordinate
+   * @param startY The starting y coordinate
+   * @param visited The visited matrix from the main connected region
+   * @returns An array of points representing the path
+   */
+  private findPath(
+    grid: number[][],
+    startX: number,
+    startY: number,
+    visited: boolean[][]
+  ): Array<{ x: number; y: number }> {
+    const queue: Array<{
+      x: number;
+      y: number;
+      path: Array<{ x: number; y: number }>;
+    }> = [{ x: startX, y: startY, path: [] }];
+    const localVisited = Array(this.gridSize)
+      .fill(false)
+      .map(() => Array(this.gridSize).fill(false));
+    localVisited[startY][startX] = true;
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const { x, y, path } = current;
+
+      // Check if this cell is connected to the main region
+      if (visited[y][x]) {
+        return path;
+      }
+
+      // Explore neighbors
+      const directions = [
+        { dx: 0, dy: -1 },
+        { dx: 1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: -1, dy: 0 },
+      ];
+
+      for (const { dx, dy } of directions) {
+        const nx = x + dx;
+        const ny = y + dy;
+
+        if (
+          nx > 0 &&
+          nx < this.gridSize - 1 &&
+          ny > 0 &&
+          ny < this.gridSize - 1 &&
+          !localVisited[ny][nx]
+        ) {
+          localVisited[ny][nx] = true;
+          queue.push({
+            x: nx,
+            y: ny,
+            path: [...path, { x: nx, y: ny }],
+          });
+        }
+      }
+    }
+
+    return [];
+  }
+
+  /**
+   * Creates a randomly generated game grid using either random or cave generation
+   *
+   * @param type The type of generation: 'random', 'preDefinedPatterns' or 'cave'
+   * @returns A randomly generated game grid
+   */
+  generateGrid(
+    type: "random" | "cave" | "preDefinedPattern" = "random"
+  ): number[][] {
+    if (type === "cave") {
+      return this.generateCaveGrid();
+    } else if (type === "random") {
+      return this.generateRandomGrid();
+    } else {
+      return this.generateGridFromPredefinedPatterns(false);
+    }
   }
 
   /**
@@ -322,6 +672,113 @@ export class GameGridGenerator {
             }
             if (visible) {
               visibilityMatrix[y0][x0].push({ x: x1, y: y1 });
+            }
+          }
+        }
+      }
+    }
+
+    return visibilityMatrix;
+  }
+
+  generateVisibilityMatrixDiagonalLimited(
+    grid: number[][],
+    maxDistance: number
+  ): any[][] {
+    const visibilityMatrix: any[][] = Array(this.gridSize)
+      .fill(undefined)
+      .map(() =>
+        Array(this.gridSize)
+          .fill(undefined)
+          .map(() => [])
+      );
+
+    const solidGrid = 0b1111;
+
+    // Bresenham's line algorithm
+    function* bresenhamLine(
+      x0: number,
+      y0: number,
+      x1: number,
+      y1: number
+    ): IterableIterator<{ x: number; y: number }> {
+      const dx = Math.abs(x1 - x0);
+      const dy = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1;
+      const sy = y0 < y1 ? 1 : -1;
+      let err = dx - dy;
+
+      while (true) {
+        yield { x: x0, y: y0 };
+
+        if (x0 === x1 && y0 === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) {
+          err -= dy;
+          x0 += sx;
+        }
+        if (e2 < dx) {
+          err += dx;
+          y0 += sy;
+        }
+      }
+    }
+
+    for (let y0 = 0; y0 < this.gridSize; y0++) {
+      for (let x0 = 0; x0 < this.gridSize; x0++) {
+        for (let y1 = 0; y1 < this.gridSize; y1++) {
+          for (let x1 = 0; x1 < this.gridSize; x1++) {
+            // Calculate Euclidean distance
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > maxDistance) {
+              continue; // Skip visibility calculation for this pair
+            }
+
+            // To reduce redundant calculations, ensure (x1, y1) >= (x0, y0)
+            /*
+            if (y1 < y0 || (y1 === y0 && x1 < x0)) {
+              continue;
+            }
+            */
+
+            let visible = true;
+            let hitSolidWall = false;
+            let wallDepth = 0;
+            for (const point of bresenhamLine(x0, y0, x1, y1)) {
+              if (point.x === x0 && point.y === y0) continue;
+              if (
+                point.x === x1 &&
+                point.y === y1 &&
+                grid[point.y][point.x] === solidGrid
+              ) {
+                //We are at the end of the line and this is visible
+                continue;
+              }
+
+              if (grid[point.y][point.x] === solidGrid) {
+                if (hitSolidWall) {
+                  wallDepth++; //Counting hou many layers we can see into the wall
+                  if (wallDepth > 4) {
+                    visible = false;
+                    break;
+                  }
+                } else {
+                  //First time we hit the wall, flag as hit and start counting depth
+                  hitSolidWall = true;
+                  visible = true;
+                  wallDepth++;
+                }
+              } else if (hitSolidWall) {
+                //An empty block behind a wall, not visible
+                visible = false;
+              }
+            }
+            if (visible) {
+              //visibilityMatrix[y0][x0].add({ x: x1, y: y1 });
+              visibilityMatrix[y0][x0].push({ x: x1, y: y1 });
+              //visibilityMatrix[y1][x1].push({ x: x0, y: y0 }); // Mirror visibility
             }
           }
         }

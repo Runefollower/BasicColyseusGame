@@ -16,7 +16,7 @@ const computerPlayerCount = 1;
  * Main class for the game logic
  */
 export class SimpleGameLogic {
-  gridSize = 30;
+  gridSize = 100;
   SimpleGameMetrics = {
     gridSize: this.gridSize,
     playAreaWidth: this.gridSize * 100,
@@ -53,14 +53,28 @@ export class SimpleGameLogic {
     */
 
     // Generate a grid from standard 10 X 10 blocks
-    this.SimpleGameMetrics.grid =
-      this.gridGen.generateGridFromPredefinedPatterns(false);
+    console.log(generateLogWithTimestamp("Generating Grid"));
+    this.SimpleGameMetrics.grid = this.gridGen.generateGrid("cave");
 
+    //this.gridGen.generateGridFromPredefinedPatterns(false);
+
+    console.log(generateLogWithTimestamp("Calculating Visibility"));
     this.SimpleGameMetrics.visibilityMatrix =
-      this.gridGen.generateVisibilityMatrixDiagonal(
-        this.SimpleGameMetrics.grid
+      this.gridGen.generateVisibilityMatrixDiagonalLimited(
+        this.SimpleGameMetrics.grid,
+        10
       );
 
+    for (let y0 = 0; y0 < this.gridSize; y0++) {
+      for (let x0 = 0; x0 < this.gridSize; x0++) {
+        let ptGrid = this.SimpleGameMetrics.grid[y0][x0];
+        let vis = this.SimpleGameMetrics.visibilityMatrix[y0][x0];
+
+        console.log("Point " + y0 + "," + x0 + "+", vis.size);
+      }
+    }
+
+    console.log(generateLogWithTimestamp("Add Players"));
     for (let i = 0; i < computerPlayerCount; i++) {
       this.addNewComputerPlayer();
     }
