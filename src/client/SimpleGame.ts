@@ -124,6 +124,19 @@ function gameServerInit(message: any): void {
   gameEngine.displayHeight = canvas.height;
 }
 
+/**
+ * Callback from the server to reset the grid.
+ *
+ * @param message Game server initialization data
+ */
+function gameGridRefresh(message: any): void {
+  const { gy, gx, gridValue, visibilityMatrix } = message;
+  console.log("Updated grid and visibility matrix");
+
+  gameEngine.gameGrid[gy][gx] = gridValue;
+  gameEngine.visibilityMatrix[gy][gx] = visibilityMatrix;
+}
+
 // Add menu item to toggle the ship
 function toggleClientShip(): void {
   room.send("input", "change-type");
@@ -323,6 +336,7 @@ async function connectToServer(): Promise<string> {
   room.onStateChange.once(() => {});
 
   room.onMessage("init", gameServerInit);
+  room.onMessage("gridRefresh", gameGridRefresh);
   room.onStateChange(gameServerStateChange);
   document.addEventListener("keydown", uiKeyDown);
   document.addEventListener("keyup", uiKeyUp);

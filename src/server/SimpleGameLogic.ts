@@ -34,6 +34,10 @@ export class SimpleGameLogic {
       [0, 0],
       [0, 0],
     ],
+    gridDamage: [
+      [0, 0],
+      [0, 0],
+    ],
     visibilityMatrix: [],
   };
 
@@ -41,11 +45,26 @@ export class SimpleGameLogic {
   gameUpdateTimestamps: number[];
   gridGen = new GameGridGenerator(this.gridSize);
   computerPlayers: ComputerPlayer[];
+  private onGridRefresh: (
+    gy: number,
+    gx: number,
+    gridElement: number,
+    visibilityMatrix: any
+  ) => void;
 
-  constructor(state: GameState) {
+  constructor(
+    state: GameState,
+    onGridRefresh: (
+      gy: number,
+      gx: number,
+      gridElement: number,
+      visibilityMatrix: any
+    ) => void
+  ) {
     this.state = state;
     this.gameUpdateTimestamps = [];
     this.computerPlayers = [];
+    this.onGridRefresh = onGridRefresh; // Assign the callback for grid restructuring
 
     /*
     // This would generate a random pattern of walls
@@ -55,6 +74,19 @@ export class SimpleGameLogic {
     // Generate a grid from standard 10 X 10 blocks
     console.log(generateLogWithTimestamp("Generating Grid"));
     this.SimpleGameMetrics.grid = this.gridGen.generateGrid("cave");
+
+    //initialize gridDamage matrix
+    this.SimpleGameMetrics.gridDamage = Array(this.gridSize)
+      .fill(undefined)
+      .map(() => Array(this.gridSize).fill(0));
+
+    for (let gy = 0; gy < this.gridSize; gy++) {
+      for (let gx = 0; gx < this.gridSize; gx++) {
+        if (this.SimpleGameMetrics.grid[gy][gx] === 0b1111) {
+          this.SimpleGameMetrics.gridDamage[gy][gx] = 50;
+        }
+      }
+    }
 
     //this.gridGen.generateGridFromPredefinedPatterns(false);
 
@@ -364,7 +396,8 @@ export class SimpleGameLogic {
         newY,
         newVx,
         newVy,
-        playerRadius
+        playerRadius,
+        1
       );
 
       // Update player position and velocity
@@ -498,7 +531,8 @@ export class SimpleGameLogic {
       newY,
       laser.vx,
       laser.vy,
-      1
+      1,
+      10
     );
 
     laser.x = newX;
@@ -615,6 +649,7 @@ export class SimpleGameLogic {
    * @param vx New proposed x velocity
    * @param vy New proposed y velocity
    * @param radius Collision radius
+   * @param damage Damage done to wall
    * @returns New entity position and velocity and indication of collision
    */
   checkForWallCollision(
@@ -624,7 +659,8 @@ export class SimpleGameLogic {
     newY: number,
     vx: number,
     vy: number,
-    radius: number
+    radius: number,
+    damage: number
   ): { newX: number; newY: number; vx: number; vy: number; hit: boolean } {
     let newVal = {
       newX,
@@ -637,7 +673,13 @@ export class SimpleGameLogic {
     // Find the grid cell that we are currently in
     let gridXY = this.gridPosForPoint({ x, y });
     const gridCellA = this.SimpleGameMetrics.grid[gridXY.y][gridXY.x];
-    newVal = this.checkGridWallCollision(gridCellA, gridXY, newVal, radius);
+    newVal = this.checkGridWallCollision(
+      gridCellA,
+      gridXY,
+      newVal,
+      radius,
+      damage
+    );
 
     if (!newVal.hit) {
       // check the grid we are moving into
@@ -645,7 +687,13 @@ export class SimpleGameLogic {
       const gridCellB = this.SimpleGameMetrics.grid[gridXY.y][gridXY.x];
 
       if (gridCellA !== gridCellB) {
-        newVal = this.checkGridWallCollision(gridCellB, gridXY, newVal, radius);
+        newVal = this.checkGridWallCollision(
+          gridCellB,
+          gridXY,
+          newVal,
+          radius,
+          damage
+        );
 
         if (newVal.hit) {
           console.log(
@@ -706,8 +754,12 @@ export class SimpleGameLogic {
       vy: number;
       hit: boolean;
     },
-    radius: number
+    radius: number,
+    damage: number
   ): { newX: number; newY: number; vx: number; vy: number; hit: boolean } {
+    let hy = 0;
+    let hx = 0;
+
     // Check for collisions with the left and right
     const newXinCell =
       newVal.newX - gridPos.x * this.SimpleGameMetrics.cellSize;
@@ -717,6 +769,9 @@ export class SimpleGameLogic {
     ) {
       // Collided with right wall
       newVal.hit = true;
+      hy = gridPos.y;
+      hx = gridPos.x + 1;
+
       newVal.vx = 0; // Stop horizontal movement
       newVal.newX =
         gridPos.x * this.SimpleGameMetrics.cellSize +
@@ -728,6 +783,9 @@ export class SimpleGameLogic {
     ) {
       // Collided with left wall
       newVal.hit = true;
+      hy = gridPos.y;
+      hx = gridPos.x - 1;
+
       newVal.vx = 0; // Stop horizontal movement
       newVal.newX = gridPos.x * this.SimpleGameMetrics.cellSize + radius; // Move to the right of the wall
     }
@@ -741,6 +799,9 @@ export class SimpleGameLogic {
     ) {
       // Collided with bottom wall
       newVal.hit = true;
+      hy = gridPos.y + 1;
+      hx = gridPos.x;
+
       newVal.vy = 0; // Stop vertical movement
       newVal.newY =
         gridPos.y * this.SimpleGameMetrics.cellSize +
@@ -752,11 +813,83 @@ export class SimpleGameLogic {
     ) {
       // Collided with top wall
       newVal.hit = true;
+      hy = gridPos.y - 1;
+      hx = gridPos.x;
+
       newVal.vy = 0; // Stop vertical movement
       newVal.newY = gridPos.y * this.SimpleGameMetrics.cellSize + radius; // Move below the wall
     }
 
+    //A wall was hit, update the damage on the wall and if it falls to zero
+    //remove it from the grid
+    if (newVal.hit) {
+      console.log("Damage " + this.SimpleGameMetrics.gridDamage[hy][hx]);
+      this.SimpleGameMetrics.gridDamage[hy][hx] -= damage;
+
+      if (this.SimpleGameMetrics.gridDamage[hy][hx] <= 0) {
+        //Grid square is destroyed
+
+        console.log("before " + this.SimpleGameMetrics.grid[hy][hx]);
+
+        // reset this and prior position to empty
+        this.SimpleGameMetrics.grid[gridPos.y][gridPos.x] = 0b0000;
+        this.SimpleGameMetrics.grid[hy][hx] = 0b0000;
+        console.log("after " + this.SimpleGameMetrics.grid[hy][hx]);
+
+        for (let patchY = hy - 2; patchY < hy + 2; patchY++) {
+          for (let patchX = hx - 2; patchX < hx + 2; patchX++) {
+            if (
+              patchY < 0 ||
+              patchY >= this.SimpleGameMetrics.gridSize ||
+              patchX < 0 ||
+              patchX >= this.SimpleGameMetrics.gridSize
+            )
+              continue;
+
+            this.gridGen.matchWallsPoint(
+              this.SimpleGameMetrics.grid,
+              patchY,
+              patchX
+            );
+          }
+          console.log("after " + this.SimpleGameMetrics.grid[hy][hx]);
+        }
+
+        this.notifyClientsGridUpdate(hy, hx);
+      }
+    }
+
     return newVal;
+  }
+
+  /**
+   * Notify clients of updates to the grid aound a point
+   *
+   * @param gy  Position updated in grid
+   * @param gx  Position updated in grid
+   */
+  notifyClientsGridUpdate(gy: number, gx: number) {
+    if (this.onGridRefresh) {
+      for (let patchY = gy - 2; patchY < gy + 2; patchY++) {
+        for (let patchX = gx - 2; patchX < gx + 2; patchX++) {
+          if (
+            patchY < 0 ||
+            patchY >= this.SimpleGameMetrics.gridSize ||
+            patchX < 0 ||
+            patchX >= this.SimpleGameMetrics.gridSize
+          )
+            continue;
+
+          // Invoke the callback to notify clients
+          this.onGridRefresh(
+            patchY,
+            patchX,
+            this.SimpleGameMetrics.grid[patchY][patchX],
+            this.SimpleGameMetrics.visibilityMatrix[patchY][patchX]
+          );
+        }
+      }
+    }
   }
 
   /**

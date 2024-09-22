@@ -561,29 +561,33 @@ export class GameGridGenerator {
     // Traverse all cells in the grid
     for (let y = 0; y < grid.length; y++) {
       for (let x = 0; x < grid[y].length; x++) {
-        // Check right neighbor, if exists
-        if (x < grid[y].length - 1) {
-          // If current cell has a right wall, ensure the neighbor has a left wall
-          if (grid[y][x] & this.wallMask.R) {
-            grid[y][x + 1] |= this.wallMask.L;
-          }
-          // If neighbor has a left wall, ensure the current cell has a right wall
-          if (grid[y][x + 1] & this.wallMask.L) {
-            grid[y][x] |= this.wallMask.R;
-          }
-        }
+        this.matchWallsPoint(grid, y, x);
+      }
+    }
+  }
 
-        // Check bottom neighbor, if exists
-        if (y < grid.length - 1) {
-          // If current cell has a bottom wall, ensure the neighbor has a top wall
-          if (grid[y][x] & this.wallMask.B) {
-            grid[y + 1][x] |= this.wallMask.T;
-          }
-          // If neighbor has a top wall, ensure the current cell has a bottom wall
-          if (grid[y + 1][x] & this.wallMask.T) {
-            grid[y][x] |= this.wallMask.B;
-          }
-        }
+  matchWallsPoint(grid: number[][], gy: number, gx: number): void {
+    // Check right neighbor, if exists
+    if (gx < grid[gy].length - 1) {
+      // If current cell has a right wall, ensure the neighbor has a left wall
+      if (grid[gy][gx] & this.wallMask.R) {
+        grid[gy][gx + 1] |= this.wallMask.L;
+      }
+      // If neighbor has a left wall, ensure the current cell has a right wall
+      if (grid[gy][gx + 1] & this.wallMask.L) {
+        grid[gy][gx] |= this.wallMask.R;
+      }
+    }
+
+    // Check bottom neighbor, if exists
+    if (gy < grid.length - 1) {
+      // If current cell has a bottom wall, ensure the neighbor has a top wall
+      if (grid[gy][gx] & this.wallMask.B) {
+        grid[gy + 1][gx] |= this.wallMask.T;
+      }
+      // If neighbor has a top wall, ensure the current cell has a bottom wall
+      if (grid[gy + 1][gx] & this.wallMask.T) {
+        grid[gy][gx] |= this.wallMask.B;
       }
     }
   }
@@ -726,65 +730,115 @@ export class GameGridGenerator {
 
     for (let y0 = 0; y0 < this.gridSize; y0++) {
       for (let x0 = 0; x0 < this.gridSize; x0++) {
-        for (let y1 = 0; y1 < this.gridSize; y1++) {
-          for (let x1 = 0; x1 < this.gridSize; x1++) {
-            // Calculate Euclidean distance
-            const dx = x1 - x0;
-            const dy = y1 - y0;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance > maxDistance) {
-              continue; // Skip visibility calculation for this pair
-            }
+        visibilityMatrix[y0][x0] =
+          this.generateVisibilityMatrixDiagonalLimitedPoint(
+            y0,
+            x0,
+            grid,
+            maxDistance
+          );
+      }
+    }
 
-            // To reduce redundant calculations, ensure (x1, y1) >= (x0, y0)
-            /*
+    return visibilityMatrix;
+  }
+
+  generateVisibilityMatrixDiagonalLimitedPoint(
+    y0: number,
+    x0: number,
+    grid: number[][],
+    maxDistance: number
+  ): any {
+    const visibility: any[] = Array();
+
+    const solidGrid = 0b1111;
+
+    // Bresenham's line algorithm
+    function* bresenhamLine(
+      x0: number,
+      y0: number,
+      x1: number,
+      y1: number
+    ): IterableIterator<{ x: number; y: number }> {
+      const dx = Math.abs(x1 - x0);
+      const dy = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1;
+      const sy = y0 < y1 ? 1 : -1;
+      let err = dx - dy;
+
+      while (true) {
+        yield { x: x0, y: y0 };
+
+        if (x0 === x1 && y0 === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) {
+          err -= dy;
+          x0 += sx;
+        }
+        if (e2 < dx) {
+          err += dx;
+          y0 += sy;
+        }
+      }
+    }
+
+    for (let y1 = 0; y1 < this.gridSize; y1++) {
+      for (let x1 = 0; x1 < this.gridSize; x1++) {
+        // Calculate Euclidean distance
+        const dx = x1 - x0;
+        const dy = y1 - y0;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > maxDistance) {
+          continue; // Skip visibility calculation for this pair
+        }
+
+        // To reduce redundant calculations, ensure (x1, y1) >= (x0, y0)
+        /*
             if (y1 < y0 || (y1 === y0 && x1 < x0)) {
               continue;
             }
             */
 
-            let visible = true;
-            let hitSolidWall = false;
-            let wallDepth = 0;
-            for (const point of bresenhamLine(x0, y0, x1, y1)) {
-              if (point.x === x0 && point.y === y0) continue;
-              if (
-                point.x === x1 &&
-                point.y === y1 &&
-                grid[point.y][point.x] === solidGrid
-              ) {
-                //We are at the end of the line and this is visible
-                continue;
-              }
-
-              if (grid[point.y][point.x] === solidGrid) {
-                if (hitSolidWall) {
-                  wallDepth++; //Counting hou many layers we can see into the wall
-                  if (wallDepth > 4) {
-                    visible = false;
-                    break;
-                  }
-                } else {
-                  //First time we hit the wall, flag as hit and start counting depth
-                  hitSolidWall = true;
-                  visible = true;
-                  wallDepth++;
-                }
-              } else if (hitSolidWall) {
-                //An empty block behind a wall, not visible
-                visible = false;
-              }
-            }
-            if (visible) {
-              visibilityMatrix[y0][x0].push({ x: x1, y: y1 });
-              //visibilityMatrix[y1][x1].push({ x: x0, y: y0 }); // Mirror visibility
-            }
+        let visible = true;
+        let hitSolidWall = false;
+        let wallDepth = 0;
+        for (const point of bresenhamLine(x0, y0, x1, y1)) {
+          if (point.x === x0 && point.y === y0) continue;
+          if (
+            point.x === x1 &&
+            point.y === y1 &&
+            grid[point.y][point.x] === solidGrid
+          ) {
+            //We are at the end of the line and this is visible
+            continue;
           }
+
+          if (grid[point.y][point.x] === solidGrid) {
+            if (hitSolidWall) {
+              wallDepth++; //Counting hou many layers we can see into the wall
+              if (wallDepth > 4) {
+                visible = false;
+                break;
+              }
+            } else {
+              //First time we hit the wall, flag as hit and start counting depth
+              hitSolidWall = true;
+              visible = true;
+              wallDepth++;
+            }
+          } else if (hitSolidWall) {
+            //An empty block behind a wall, not visible
+            visible = false;
+          }
+        }
+        if (visible) {
+          visibility.push({ x: x1, y: y1 });
+          //visibilityMatrix[y1][x1].push({ x: x0, y: y0 }); // Mirror visibility
         }
       }
     }
 
-    return visibilityMatrix;
+    return visibility;
   }
 }
 

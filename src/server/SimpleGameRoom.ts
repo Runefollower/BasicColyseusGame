@@ -49,7 +49,12 @@ export class SimpleGameRoom extends Room<GameState> {
   async onCreate(): Promise<void> {
     console.log(generateLogWithTimestamp("CreateGameRoom"));
     this.setState(new GameState());
-    this.gameLogic = new SimpleGameLogic(this.state);
+
+    // Initialize SimpleGameLogic with a callback
+    this.gameLogic = new SimpleGameLogic(
+      this.state,
+      this.onGridRefresh.bind(this)
+    );
 
     // Register the "move" message handler
     this.onMessage("input", (client, input) => {
@@ -87,6 +92,22 @@ export class SimpleGameRoom extends Room<GameState> {
     this.setSimulationInterval((deltaTime) => {
       this.gameLogic.update(deltaTime, this.clock.elapsedTime);
     });
+  }
+
+  /**
+   * Callback function to handle wall removal events.
+   * Broadcasts the updated grid and visibility matrix to all clients.
+   *
+   * @param grid The updated grid after wall removal.
+   * @param visibilityMatrix The updated visibility matrix.
+   */
+  private onGridRefresh(
+    gy: number,
+    gx: number,
+    gridValue: number,
+    visibilityMatrix: any
+  ): void {
+    this.broadcast("gridRefresh", { gy, gx, gridValue, visibilityMatrix });
   }
 
   async onJoin(client: Client): Promise<void> {
