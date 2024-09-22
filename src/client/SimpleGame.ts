@@ -117,6 +117,7 @@ function gameServerInit(message: any): void {
   gameEngine.gridSize = gameMetrics.gridSize;
   gameEngine.cellSize = gameMetrics.cellSize;
   gameEngine.gameGrid = gameMetrics.grid;
+  gameEngine.resetSeenGrid();
   gameEngine.visibilityMatrix = gameMetrics.visibilityMatrix;
 
   gameEngine.displayWidth = canvas.width;

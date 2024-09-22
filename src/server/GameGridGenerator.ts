@@ -776,7 +776,6 @@ export class GameGridGenerator {
               }
             }
             if (visible) {
-              //visibilityMatrix[y0][x0].add({ x: x1, y: y1 });
               visibilityMatrix[y0][x0].push({ x: x1, y: y1 });
               //visibilityMatrix[y1][x1].push({ x: x0, y: y0 }); // Mirror visibility
             }

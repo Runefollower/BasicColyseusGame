@@ -35,6 +35,9 @@ export class SSGameEngineClient {
   gridSize: number;
   cellSize: number;
   gameGrid: number[][];
+
+  // seenGrid to track non-visible cells
+  seenGrid: number[][];
   visibilityMatrix: any[][];
   TOP = 0b0001;
   RIGHT = 0b0010;
@@ -80,6 +83,15 @@ export class SSGameEngineClient {
     this.framesBetweenState = 0;
     this.renderUpdateTimestamps = [];
     this.serverUpdateTimestamps = [];
+  }
+
+  /**
+   * Resets the seenGrid to all unseen.
+   */
+  resetSeenGrid(): void {
+    this.seenGrid = Array(this.gridSize)
+      .fill(undefined)
+      .map(() => Array(this.gridSize).fill(null));
   }
 
   // Update the game engine, passed the udt or update delta time
@@ -243,91 +255,171 @@ export class SSGameEngineClient {
     return isVisible;
   }
 
+  /**
+   * Draws the entire grid on the canvas, handling visibility and previously seen cells.
+   *
+   * @param context The canvas rendering context.
+   * @param playerPos The player's current grid position.
+   */
   drawGrid(
     context: CanvasRenderingContext2D,
-    obsGridPos: { x: number; y: number }
+    playerPos: { x: number; y: number }
   ): void {
-    context.strokeStyle = "black"; // color of the walls
-    context.lineWidth = 4; // width of the walls
+    context.lineWidth = 4; // Width of the walls
 
-    const visibilityArray: Array<{ x: number; y: number }> =
-      this.visibilityMatrix[obsGridPos.y][obsGridPos.x];
+    const visibleCells: Array<{ x: number; y: number }> =
+      this.visibilityMatrix[playerPos.y][playerPos.x];
+
+    // Create a Set for faster lookup
+    const visibleSet = new Set<string>();
+    visibleCells.forEach((cell) => {
+      visibleSet.add(`${cell.x},${cell.y}`);
+    });
 
     for (let y = 0; y < this.gameGrid.length; y++) {
       for (let x = 0; x < this.gameGrid[y].length; x++) {
-        let isVisible = false;
-        for (const visiblePt of visibilityArray) {
-          if (visiblePt.x === x && visiblePt.y === y) isVisible = true;
+        const cellKey = `${x},${y}`;
+        const isVisible = visibleSet.has(cellKey);
+        const hasBeenSeen = this.seenGrid[y][x] !== null;
+
+        const currentCell = this.gameGrid[y][x];
+        const lastSeenCell = this.seenGrid[y][x];
+
+        // Update seenGrid if the cell is currently visible
+        if (isVisible) {
+          this.seenGrid[y][x] = currentCell;
         }
 
-        const cell = this.gameGrid[y][x];
+        // Determine which cell state to render
+        const cellToRender = isVisible ? currentCell : lastSeenCell;
+
+        if (cellToRender === null) {
+          // Optionally, skip rendering unseen cells or render them as unexplored
+          // Uncomment the next line to skip rendering
+          // continue;
+
+          // Or, render as unexplored
+          this.drawUnexplored(context, x, y);
+          continue;
+        }
+
+        // Determine rendering style based on visibility
+        if (
+          cellToRender & this.LEFT &&
+          cellToRender & this.RIGHT &&
+          cellToRender & this.TOP &&
+          cellToRender & this.BOTTOM
+        ) {
+          //This is a wall
+          if (isVisible) {
+            context.fillStyle = "rgb(160,160,160)"; // Visible wall
+          } else {
+            context.fillStyle = "rgb(200,200,200)"; // Previously seen wall
+          }
+        } else {
+          if (isVisible) {
+            context.fillStyle = "rgb(255,255,255)"; // Visible cells
+          } else {
+            context.fillStyle = "rgb(240,240,240)"; // Previously seen free space
+          }
+        }
+
         const xPos = x * this.cellSize;
         const yPos = y * this.cellSize;
 
-        // Draw top wall
-        if ((cell & this.TOP) !== 0) {
-          context.beginPath();
-          context.moveTo(xPos, yPos);
-          context.lineTo(xPos + this.cellSize, yPos);
-          context.stroke();
-        }
+        // Draw the cell background
+        context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
 
-        // Draw right wall
-        if ((cell & this.RIGHT) !== 0) {
-          context.beginPath();
-          context.moveTo(xPos + this.cellSize, yPos);
-          context.lineTo(xPos + this.cellSize, yPos + this.cellSize);
-          context.stroke();
-        }
-
-        // Draw bottom wall
-        if ((cell & this.BOTTOM) !== 0) {
-          context.beginPath();
-          context.moveTo(xPos + this.cellSize, yPos + this.cellSize);
-          context.lineTo(xPos, yPos + this.cellSize);
-          context.stroke();
-        }
-
-        // Draw left wall
-        if ((cell & this.LEFT) !== 0) {
-          context.beginPath();
-          context.moveTo(xPos, yPos + this.cellSize);
-          context.lineTo(xPos, yPos);
-          context.stroke();
-        }
-
-        // Solid block
-        if (
-          cell & this.LEFT &&
-          cell & this.RIGHT &&
-          cell & this.TOP &&
-          cell & this.BOTTOM
-        ) {
-          if (isVisible) {
-            context.fillStyle = "grey";
-          } else {
-            if (this.hideInvisible) {
-              context.fillStyle = "black";
-            } else {
-              context.fillStyle = "rgb(180,180,180)";
-            }
-          }
-          context.strokeStyle = "black";
-          context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
-        } else {
-          if (isVisible) {
-            context.fillStyle = "rgb(255,255,255)";
-          } else {
-            if (this.hideInvisible) {
-              context.fillStyle = "black";
-            } else {
-              context.fillStyle = "rgb(240,240,240)";
-            }
-          }
-          context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
-        }
+        // Draw walls based on cellToRender
+        this.drawWalls(context, cellToRender, xPos, yPos, isVisible);
       }
     }
+  }
+
+  /**
+   * Draws the walls for a given cell.
+   *
+   * @param context The canvas rendering context.
+   * @param cell The cell's wall bitmask.
+   * @param xPos The x-coordinate on the canvas.
+   * @param yPos The y-coordinate on the canvas.
+   * @param isVisible Whether the cell is currently visible.
+   */
+  drawWalls(
+    context: CanvasRenderingContext2D,
+    cell: number,
+    xPos: number,
+    yPos: number,
+    isVisible: boolean
+  ): void {
+    // Define wall colors based on visibility
+    context.strokeStyle = isVisible ? "black" : "grey"; // Outlines for previously seen
+
+    // Draw top wall
+    if ((cell & this.TOP) !== 0) {
+      context.beginPath();
+      context.moveTo(xPos, yPos);
+      context.lineTo(xPos + this.cellSize, yPos);
+      context.stroke();
+    }
+
+    // Draw right wall
+    if ((cell & this.RIGHT) !== 0) {
+      context.beginPath();
+      context.moveTo(xPos + this.cellSize, yPos);
+      context.lineTo(xPos + this.cellSize, yPos + this.cellSize);
+      context.stroke();
+    }
+
+    // Draw bottom wall
+    if ((cell & this.BOTTOM) !== 0) {
+      context.beginPath();
+      context.moveTo(xPos + this.cellSize, yPos + this.cellSize);
+      context.lineTo(xPos, yPos + this.cellSize);
+      context.stroke();
+    }
+
+    // Draw left wall
+    if ((cell & this.LEFT) !== 0) {
+      context.beginPath();
+      context.moveTo(xPos, yPos + this.cellSize);
+      context.lineTo(xPos, yPos);
+      context.stroke();
+    }
+
+    // Optionally, draw cell outlines for previously seen but not currently visible cells
+    if (
+      !isVisible &&
+      this.seenGrid[yPos / this.cellSize][xPos / this.cellSize] !== null
+    ) {
+      context.strokeStyle = "grey"; // Outline color for seen cells
+      context.lineWidth = 2; // Thinner lines for outlines
+      context.strokeRect(xPos, yPos, this.cellSize, this.cellSize);
+      context.lineWidth = 4; // Reset to original line width
+    }
+  }
+
+  /**
+   * Draws an unexplored cell.
+   *
+   * @param context The canvas rendering context.
+   * @param x The cell's x-coordinate.
+   * @param y The cell's y-coordinate.
+   */
+  drawUnexplored(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number
+  ): void {
+    const xPos = x * this.cellSize;
+    const yPos = y * this.cellSize;
+
+    context.fillStyle = "rgb(50,50,50)"; // Dark grey for unexplored
+    context.fillRect(xPos, yPos, this.cellSize, this.cellSize);
+
+    // Optionally, draw a fog or pattern
+    context.strokeStyle = "rgb(80,80,80)";
+    context.strokeRect(xPos, yPos, this.cellSize, this.cellSize);
   }
 
   /**
