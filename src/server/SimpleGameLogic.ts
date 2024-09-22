@@ -65,15 +65,6 @@ export class SimpleGameLogic {
         10
       );
 
-    for (let y0 = 0; y0 < this.gridSize; y0++) {
-      for (let x0 = 0; x0 < this.gridSize; x0++) {
-        let ptGrid = this.SimpleGameMetrics.grid[y0][x0];
-        let vis = this.SimpleGameMetrics.visibilityMatrix[y0][x0];
-
-        console.log("Point " + y0 + "," + x0 + "+", vis.size);
-      }
-    }
-
     console.log(generateLogWithTimestamp("Add Players"));
     for (let i = 0; i < computerPlayerCount; i++) {
       this.addNewComputerPlayer();
