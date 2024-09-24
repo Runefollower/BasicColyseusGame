@@ -823,36 +823,66 @@ export class SimpleGameLogic {
     //A wall was hit, update the damage on the wall and if it falls to zero
     //remove it from the grid
     if (newVal.hit) {
-      console.log("Damage " + this.SimpleGameMetrics.gridDamage[hy][hx]);
       this.SimpleGameMetrics.gridDamage[hy][hx] -= damage;
 
       if (this.SimpleGameMetrics.gridDamage[hy][hx] <= 0) {
         //Grid square is destroyed
 
-        console.log("before " + this.SimpleGameMetrics.grid[hy][hx]);
+        console.log("Grid destroyed y:" + hy + " x:" + hx);
 
         // reset this and prior position to empty
-        this.SimpleGameMetrics.grid[gridPos.y][gridPos.x] = 0b0000;
+        //this.SimpleGameMetrics.grid[gridPos.y][gridPos.x] = 0b0000;
         this.SimpleGameMetrics.grid[hy][hx] = 0b0000;
-        console.log("after " + this.SimpleGameMetrics.grid[hy][hx]);
 
-        for (let patchY = hy - 2; patchY < hy + 2; patchY++) {
-          for (let patchX = hx - 2; patchX < hx + 2; patchX++) {
-            if (
-              patchY < 0 ||
-              patchY >= this.SimpleGameMetrics.gridSize ||
-              patchX < 0 ||
-              patchX >= this.SimpleGameMetrics.gridSize
-            )
-              continue;
-
-            this.gridGen.matchWallsPoint(
-              this.SimpleGameMetrics.grid,
-              patchY,
-              patchX
-            );
+        if (hy > 0) {
+          if (this.SimpleGameMetrics.grid[hy - 1][hx] === 0b1111) {
+            this.SimpleGameMetrics.grid[hy][hx] |= this.gridGen.wallMask.T;
+          } else if (
+            this.SimpleGameMetrics.grid[hy - 1][hx] & this.gridGen.wallMask.B
+          ) {
+            this.SimpleGameMetrics.grid[hy - 1][hx] ^= this.gridGen.wallMask.B;
           }
-          console.log("after " + this.SimpleGameMetrics.grid[hy][hx]);
+        }
+
+        if (hy < this.SimpleGameMetrics.gridSize - 1) {
+          if (this.SimpleGameMetrics.grid[hy + 1][hx] === 0b1111) {
+            this.SimpleGameMetrics.grid[hy][hx] |= this.gridGen.wallMask.B;
+          } else if (
+            this.SimpleGameMetrics.grid[hy + 1][hx] & this.gridGen.wallMask.T
+          ) {
+            this.SimpleGameMetrics.grid[hy + 1][hx] ^= this.gridGen.wallMask.T;
+          }
+        }
+
+        if (hx > 0) {
+          if (this.SimpleGameMetrics.grid[hy][hx - 1] === 0b1111) {
+            this.SimpleGameMetrics.grid[hy][hx] |= this.gridGen.wallMask.L;
+          } else if (
+            this.SimpleGameMetrics.grid[hy][hx - 1] & this.gridGen.wallMask.R
+          ) {
+            this.SimpleGameMetrics.grid[hy][hx - 1] ^= this.gridGen.wallMask.R;
+          }
+        }
+
+        if (hx < this.SimpleGameMetrics.gridSize - 1) {
+          if (this.SimpleGameMetrics.grid[hy][hx + 1] === 0b1111) {
+            this.SimpleGameMetrics.grid[hy][hx] |= this.gridGen.wallMask.R;
+          } else if (
+            this.SimpleGameMetrics.grid[hy][hx + 1] & this.gridGen.wallMask.L
+          ) {
+            this.SimpleGameMetrics.grid[hy][hx + 1] ^= this.gridGen.wallMask.L;
+          }
+        }
+
+        //recalc visibility
+        for (const vpt of this.SimpleGameMetrics.visibilityMatrix[hy][hx]) {
+          this.SimpleGameMetrics.visibilityMatrix[vpt.y][vpt.x] =
+            this.gridGen.generateVisibilityMatrixDiagonalLimitedPoint(
+              vpt.y,
+              vpt.x,
+              this.SimpleGameMetrics.grid,
+              10
+            );
         }
 
         this.notifyClientsGridUpdate(hy, hx);
@@ -870,8 +900,8 @@ export class SimpleGameLogic {
    */
   notifyClientsGridUpdate(gy: number, gx: number) {
     if (this.onGridRefresh) {
-      for (let patchY = gy - 2; patchY < gy + 2; patchY++) {
-        for (let patchX = gx - 2; patchX < gx + 2; patchX++) {
+      for (let patchY = gy - 10; patchY < gy + 10; patchY++) {
+        for (let patchX = gx - 10; patchX < gx + 10; patchX++) {
           if (
             patchY < 0 ||
             patchY >= this.SimpleGameMetrics.gridSize ||
