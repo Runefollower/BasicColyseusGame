@@ -1,26 +1,22 @@
 /**
  * Game Grid Generator
- * Encapsulating tools to generate the grid for the game.  The grid
- * is a square N X N grid, each box being default 100px.  The sides
- * each box may be impassable representing walls.  This is represented
- * by a 4 digit binary number at each grid node with 0 representing no
- * wall and 1 representing a wall
+ * Encapsulates tools to generate the grid for the game. The grid
+ * is a square N x N grid, each cell representing a material.
+ * 0 represents free space, 1 represents "rock". More materials can be added later.
  */
 
 export class GameGridGenerator {
-  // Now you can use bitwise OR to set wall values
-  // Define some constants for readability
-  wallMask = {
-    T: 0b0001,
-    R: 0b0010,
-    B: 0b0100,
-    L: 0b1000,
+  // Define materials
+  static MATERIAL = {
+    FREE: 0,
+    ROCK: 1,
+    // Future materials can be added here
   };
 
   gridSize: number = 30;
 
-  // New parameters for procedural cave generation
-  fillProbability: number; // Probability to start a cell as open
+  // Parameters for procedural cave generation
+  fillProbability: number; // Probability to start a cell as rock
   smoothingIterations: number;
   minOpeningWidth: number;
   maxCaveSize: number;
@@ -45,16 +41,16 @@ export class GameGridGenerator {
    * @returns A procedurally generated cave grid
    */
   generateCaveGrid(): number[][] {
-    // Initialize grid with walls
+    // Initialize grid with rock
     let grid: number[][] = Array(this.gridSize)
       .fill(undefined)
-      .map(() => Array(this.gridSize).fill(0b1111)); // Start with all walls
+      .map(() => Array(this.gridSize).fill(GameGridGenerator.MATERIAL.ROCK));
 
-    // Step 1: Randomly carve out initial open spaces
+    // Step 1: Randomly carve out initial free spaces
     for (let y = 1; y < this.gridSize - 1; y++) {
       for (let x = 1; x < this.gridSize - 1; x++) {
         if (Math.random() < this.fillProbability) {
-          grid[y][x] = 0b0000; // Open cell
+          grid[y][x] = GameGridGenerator.MATERIAL.FREE; // Free cell
         }
       }
     }
@@ -73,11 +69,8 @@ export class GameGridGenerator {
     // Step 5: Ensure all cave regions are connected
     grid = this.ensureConnectivity(grid);
 
-    // Populate outer walls
+    // Populate outer walls as rock
     this.populateOuterWalls(grid);
-
-    // Match walls between adjacent cells
-    this.matchWalls(grid);
 
     return grid;
   }
@@ -93,19 +86,21 @@ export class GameGridGenerator {
 
     for (let y = 1; y < this.gridSize - 1; y++) {
       for (let x = 1; x < this.gridSize - 1; x++) {
-        let walls = 0;
+        let rockCount = 0;
         // Check all 8 neighbors
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
             if (dy === 0 && dx === 0) continue;
-            walls += grid[y + dy][x + dx] === 0b1111 ? 1 : 0;
+            if (grid[y + dy][x + dx] === GameGridGenerator.MATERIAL.ROCK) {
+              rockCount++;
+            }
           }
         }
 
-        if (walls > 4) {
-          newGrid[y][x] = 0b1111; // Wall
-        } else if (walls < 3) {
-          newGrid[y][x] = 0b0000; // Open
+        if (rockCount > 4) {
+          newGrid[y][x] = GameGridGenerator.MATERIAL.ROCK;
+        } else if (rockCount < 3) {
+          newGrid[y][x] = GameGridGenerator.MATERIAL.FREE;
         }
         // Otherwise, keep the current state
       }
@@ -125,25 +120,21 @@ export class GameGridGenerator {
     grid: number[][],
     minWidth: number
   ): number[][] {
-    // This function can be implemented based on specific requirements.
-    // For simplicity, we'll ensure that there are no single-cell-wide passages.
-
+    // Ensure that there are no single-cell-wide passages
     for (let y = 1; y < this.gridSize - 1; y++) {
       for (let x = 1; x < this.gridSize - 1; x++) {
-        if (grid[y][x] === 0b0000) {
-          // Check surrounding cells to ensure minimal width
-          let openNeighbors = 0;
+        if (grid[y][x] === GameGridGenerator.MATERIAL.FREE) {
+          let freeNeighbors = 0;
           for (let dy = -1; dy <= 1; dy++) {
             for (let dx = -1; dx <= 1; dx++) {
               if (dy === 0 && dx === 0) continue;
-              if (grid[y + dy][x + dx] === 0b0000) {
-                openNeighbors++;
+              if (grid[y + dy][x + dx] === GameGridGenerator.MATERIAL.FREE) {
+                freeNeighbors++;
               }
             }
           }
-          if (openNeighbors < minWidth) {
-            // Convert to wall if not enough open neighbors
-            grid[y][x] = 0b1111;
+          if (freeNeighbors < minWidth) {
+            grid[y][x] = GameGridGenerator.MATERIAL.ROCK;
           }
         }
       }
@@ -169,7 +160,7 @@ export class GameGridGenerator {
     // Flood fill to identify regions
     for (let y = 1; y < this.gridSize - 1; y++) {
       for (let x = 1; x < this.gridSize - 1; x++) {
-        if (!visited[y][x] && grid[y][x] === 0b0000) {
+        if (!visited[y][x] && grid[y][x] === GameGridGenerator.MATERIAL.FREE) {
           const region: number[][] = [];
           const queue: Array<{ x: number; y: number }> = [{ x, y }];
           visited[y][x] = true;
@@ -189,13 +180,14 @@ export class GameGridGenerator {
             for (const { dx, dy } of directions) {
               const nx = cx + dx;
               const ny = cy + dy;
+
               if (
                 nx > 0 &&
                 nx < this.gridSize - 1 &&
                 ny > 0 &&
                 ny < this.gridSize - 1 &&
                 !visited[ny][nx] &&
-                grid[ny][nx] === 0b0000
+                grid[ny][nx] === GameGridGenerator.MATERIAL.FREE
               ) {
                 visited[ny][nx] = true;
                 queue.push({ x: nx, y: ny });
@@ -215,10 +207,10 @@ export class GameGridGenerator {
     for (let i = 0; i < regions.length; i++) {
       const region = regions[i];
       if (region.length > maxSize) {
-        // Convert excess cells to walls
+        // Convert excess cells to rock
         for (let j = maxSize; j < region.length; j++) {
           const [x, y] = region[j];
-          grid[y][x] = 0b1111;
+          grid[y][x] = GameGridGenerator.MATERIAL.ROCK;
         }
       }
     }
@@ -260,7 +252,7 @@ export class GameGridGenerator {
           nx < this.gridSize - 1 &&
           ny > 0 &&
           ny < this.gridSize - 1 &&
-          grid[ny][nx] === 0b0000 &&
+          grid[ny][nx] === GameGridGenerator.MATERIAL.FREE &&
           !visited[ny][nx]
         ) {
           visited[ny][nx] = true;
@@ -272,13 +264,13 @@ export class GameGridGenerator {
     // Find disconnected regions and connect them
     for (let y = 1; y < this.gridSize - 1; y++) {
       for (let x = 1; x < this.gridSize - 1; x++) {
-        if (grid[y][x] === 0b0000 && !visited[y][x]) {
+        if (grid[y][x] === GameGridGenerator.MATERIAL.FREE && !visited[y][x]) {
           // Find the nearest connected cell
           const path = this.findPath(grid, x, y, visited);
           if (path.length > 0) {
-            // Carve the path
+            // Carve the path by setting cells to free
             for (const { x: px, y: py } of path) {
-              grid[py][px] = 0b0000;
+              grid[py][px] = GameGridGenerator.MATERIAL.FREE;
               visited[py][px] = true;
             }
           }
@@ -340,7 +332,8 @@ export class GameGridGenerator {
           nx < this.gridSize - 1 &&
           ny > 0 &&
           ny < this.gridSize - 1 &&
-          !localVisited[ny][nx]
+          !localVisited[ny][nx] &&
+          grid[ny][nx] === GameGridGenerator.MATERIAL.FREE
         ) {
           localVisited[ny][nx] = true;
           queue.push({
@@ -358,7 +351,7 @@ export class GameGridGenerator {
   /**
    * Creates a randomly generated game grid using either random or cave generation
    *
-   * @param type The type of generation: 'random', 'preDefinedPatterns' or 'cave'
+   * @param type The type of generation: 'random' or 'cave' or 'preDefinedPattern'
    * @returns A randomly generated game grid
    */
   generateGrid(
@@ -379,124 +372,52 @@ export class GameGridGenerator {
    * @returns A randomly generated game grid
    */
   generateRandomGrid(): number[][] {
-    // Initialize the grid as an empty grid (no walls)
+    // Initialize the grid as free space
     const grid: number[][] = Array(this.gridSize)
       .fill(undefined)
-      .map(() => Array(this.gridSize).fill(0b0000)); // binary for no walls
+      .map(() => Array(this.gridSize).fill(GameGridGenerator.MATERIAL.FREE));
 
-    // Randomly generate walls
+    // Randomly generate rock cells
     for (let y = 0; y < this.gridSize; y++) {
       for (let x = 0; x < this.gridSize; x++) {
         // For cells not on the boundary
         if (x > 0 && x < this.gridSize - 1 && y > 0 && y < this.gridSize - 1) {
-          // Randomly decide if there should be a wall on the right
           if (Math.random() < 0.15) {
-            grid[y][x] |= this.wallMask.R;
-            grid[y][x + 1] |= this.wallMask.L;
-          }
-          // Randomly decide if there should be a wall on the bottom
-          if (Math.random() < 0.15) {
-            grid[y][x] |= this.wallMask.B;
-            grid[y + 1][x] |= this.wallMask.T;
+            grid[y][x] = GameGridGenerator.MATERIAL.ROCK;
           }
         }
 
-        // For cells on the boundary
-        if (x === 0) {
-          grid[y][x] |= this.wallMask.L;
-        }
-        if (x === this.gridSize - 1) {
-          grid[y][x] |= this.wallMask.R;
-        }
-        if (y === 0) {
-          grid[y][x] |= this.wallMask.T;
-        }
-        if (y === this.gridSize - 1) {
-          grid[y][x] |= this.wallMask.B;
+        // For cells on the boundary, set as rock
+        if (
+          x === 0 ||
+          x === this.gridSize - 1 ||
+          y === 0 ||
+          y === this.gridSize - 1
+        ) {
+          grid[y][x] = GameGridGenerator.MATERIAL.ROCK;
         }
       }
     }
 
-    return this.removeLockedWalls(grid);
-  }
-
-  /**
-   * Scans a grid and unblocks any fully enclosed regions
-   *
-   * @param grid The grid we are checking for locked regions
-   * @returns The modified grid with locked regions removed
-   */
-  removeLockedWalls(grid: number[][]): number[][] {
-    // Create a grid to track visited cells
-    const visited = Array(this.gridSize)
-      .fill(false)
-      .map(() => Array(this.gridSize).fill(false));
-
-    // Recursive function to perform the depth-first search
-    function dfs(x: number, y: number, gridSize: number, wm: any): void {
-      // Return if the cell is out of bounds or already visited
-      if (
-        x < 0 ||
-        y < 0 ||
-        x >= gridSize ||
-        y >= gridSize ||
-        visited[y][x] === true
-      ) {
-        return;
-      }
-
-      // Mark the cell as visited
-      visited[y][x] = true;
-
-      // Visit all adjacent cells
-      if ((grid[y][x] & wm.T) === 0) {
-        dfs(x, y - 1, gridSize, wm);
-      }
-      if ((grid[y][x] & wm.R) === 0) {
-        dfs(x + 1, y, gridSize, wm);
-      }
-      if ((grid[y][x] & wm.B) === 0) {
-        dfs(x, y + 1, gridSize, wm);
-      }
-      if ((grid[y][x] & wm.L) === 0) {
-        dfs(x - 1, y, gridSize, wm);
-      }
-    }
-
-    // Start the search from the top-left cell (or any cell on the boundary)
-    dfs(0, 0, this.gridSize, this.wallMask);
-
-    // Check for cells that weren't visited and remove a wall to make them reachable
-    for (let y = 0; y < this.gridSize; y++) {
-      for (let x = 0; x < this.gridSize; x++) {
-        if (visited[y][x] === false) {
-          // Remove a wall. In this case, we'll remove the top wall, but you can choose any wall depending on your needs
-          grid[y][x] &= ~this.wallMask.T;
-          // If not in the top row, add a corresponding opening in the cell above
-          if (y > 0) {
-            grid[y - 1][x] &= ~this.wallMask.B;
-          }
-        }
-      }
-    }
     return grid;
   }
 
   /**
-   * Generate a grid that is selected from the pre defined patterns
+   * Generate a grid that is selected from the predefined patterns
    *
    * @param useImpossibleGrids Used for testing, uses grids that are mostly full
    * @returns The new grid
    */
   generateGridFromPredefinedPatterns(useImpossibleGrids: boolean): number[][] {
     // Create a grid
-    let sampleArray = preDefined10x10Grids;
+    let sampleArray = GameGridGenerator.predefined10x10Grids;
 
-    if (useImpossibleGrids) sampleArray = preDefined10x10ImpossibleGrids;
+    if (useImpossibleGrids)
+      sampleArray = GameGridGenerator.predefined10x10ImpossibleGrids;
 
     const grid = Array(this.gridSize)
       .fill(0)
-      .map(() => Array(this.gridSize).fill(0));
+      .map(() => Array(this.gridSize).fill(GameGridGenerator.MATERIAL.FREE));
 
     // Size of the pre-defined patterns
     const patternSize = 10;
@@ -524,85 +445,32 @@ export class GameGridGenerator {
     }
 
     this.populateOuterWalls(grid);
-    this.matchWalls(grid);
     return grid;
   }
 
   /**
-   * This will ensure all outside walls are populated
+   * Ensures all outer cells are set as rock
    *
-   * @param grid The grid now with all exterior walls populated
+   * @param grid The grid to populate outer walls
    */
   populateOuterWalls(grid: number[][]): void {
-    // Set top and bottom walls
     for (let x = 0; x < grid.length; x++) {
-      // Top walls (set the first bit)
-      grid[0][x] |= this.wallMask.T;
-      // Bottom walls (set the third bit)
-      grid[grid.length - 1][x] |= this.wallMask.B;
+      grid[0][x] = GameGridGenerator.MATERIAL.ROCK; // Top
+      grid[grid.length - 1][x] = GameGridGenerator.MATERIAL.ROCK; // Bottom
     }
 
-    // Set left and right walls
     for (let y = 0; y < grid.length; y++) {
-      // Left walls (set the fourth bit)
-      grid[y][0] |= this.wallMask.L;
-      // Right walls (set the second bit)
-      grid[y][grid.length - 1] |= this.wallMask.R;
+      grid[y][0] = GameGridGenerator.MATERIAL.ROCK; // Left
+      grid[y][grid.length - 1] = GameGridGenerator.MATERIAL.ROCK; // Right
     }
   }
 
   /**
-   * Ensure that all walls are matched.  So if there is a wall on the left, the
-   * grid on the left should have a matching wall on the right
+   * Generates a visibility matrix considering diagonal vision, representing
+   * the set of visible grid cells from each cell in the grid.
    *
-   * @param grid The grid we are checking
-   */
-  matchWalls(grid: number[][]): void {
-    // Traverse all cells in the grid
-    for (let y = 0; y < grid.length; y++) {
-      for (let x = 0; x < grid[y].length; x++) {
-        this.matchWallsPoint(grid, y, x);
-      }
-    }
-  }
-
-  matchWallsPoint(grid: number[][], gy: number, gx: number): void {
-    // Check right neighbor, if exists
-    if (gx < grid[gy].length - 1) {
-      // If current cell has a right wall, ensure the neighbor has a left wall
-      if (grid[gy][gx] & this.wallMask.R) {
-        grid[gy][gx + 1] |= this.wallMask.L;
-      }
-      // If neighbor has a left wall, ensure the current cell has a right wall
-      if (grid[gy][gx + 1] & this.wallMask.L) {
-        grid[gy][gx] |= this.wallMask.R;
-      }
-    }
-
-    // Check bottom neighbor, if exists
-    if (gy < grid.length - 1) {
-      // If current cell has a bottom wall, ensure the neighbor has a top wall
-      if (grid[gy][gx] & this.wallMask.B) {
-        grid[gy + 1][gx] |= this.wallMask.T;
-      }
-      // If neighbor has a top wall, ensure the current cell has a bottom wall
-      if (grid[gy + 1][gx] & this.wallMask.T) {
-        grid[gy][gx] |= this.wallMask.B;
-      }
-    }
-  }
-
-  /**
-   * Generates a visibility matrix considering diagonal vision, which represents the set of visible grid cells from each cell in the grid.
-   * It accounts for obstacles/walls represented by the bitmask values in wallMask for each cell.
-   *
-   * @param {number[][]} grid The game grid, represented as a 2D array. Each cell contains a binary representation of the walls.
-   * @param {object} wm The wallMask object, containing binary representations for top (T), right (R), bottom (B), and left (L) walls.
-   * @returns {Set[][]} A 2D array of Sets, where each Set contains grid coordinates {x: number, y: number} of visible cells from the corresponding cell.
-   * If the cell at coordinates (y, x) has walls, those are considered as obstacles for visibility.
-   * For each pair of cells, it uses the Bresenham's line algorithm to get the coordinates of cells that form a straight line between the pair,
-   * and checks if there is a wall between them. If there is a wall, the second cell is not visible from the first one.
-   * Diagonal vision is allowed, i.e., a cell can "see" another cell diagonally if there is no obstacle in the line of sight.
+   * @param grid The game grid, represented as a 2D array. Each cell contains a material.
+   * @returns A 2D array of Sets, where each Set contains grid coordinates {x: number, y: number} of visible cells from the corresponding cell.
    */
   generateVisibilityMatrixDiagonal(grid: number[][]): any[][] {
     const visibilityMatrix: any[][] = Array(this.gridSize)
@@ -610,10 +478,8 @@ export class GameGridGenerator {
       .map(() =>
         Array(this.gridSize)
           .fill(undefined)
-          .map(() => [])
+          .map(() => new Set<string>())
       );
-
-    const solidGrid = 0b1111;
 
     // Bresenham's line algorithm
     function* bresenhamLine(
@@ -649,33 +515,15 @@ export class GameGridGenerator {
         for (let y1 = 0; y1 < this.gridSize; y1++) {
           for (let x1 = 0; x1 < this.gridSize; x1++) {
             let visible = true;
-            let hitSolidWall = false;
             for (const point of bresenhamLine(x0, y0, x1, y1)) {
               if (point.x === x0 && point.y === y0) continue;
-              if (
-                point.x === x1 &&
-                point.y === y1 &&
-                grid[point.y][point.x] === solidGrid
-              )
-                continue;
-              /*
-              for (const mask of wallMasks) {
-                if (grid[point.y][point.x] & mask) {
-                  visible = false;
-                  break;
-                }
-              }
-              */
-              if (grid[point.y][point.x] === solidGrid) {
-                hitSolidWall = true;
-              } else if (hitSolidWall) {
+              if (grid[point.y][point.x] === GameGridGenerator.MATERIAL.ROCK) {
                 visible = false;
                 break;
               }
-              if (!visible) break;
             }
             if (visible) {
-              visibilityMatrix[y0][x0].push({ x: x1, y: y1 });
+              visibilityMatrix[y0][x0].add(`${x1},${y1}`);
             }
           }
         }
@@ -685,6 +533,13 @@ export class GameGridGenerator {
     return visibilityMatrix;
   }
 
+  /**
+   * Generates a limited visibility matrix considering diagonal vision and maximum distance
+   *
+   * @param grid The game grid, represented as a 2D array. Each cell contains a material.
+   * @param maxDistance The maximum distance for visibility
+   * @returns A 2D array of Sets, where each Set contains grid coordinates {x: number, y: number} of visible cells from the corresponding cell.
+   */
   generateVisibilityMatrixDiagonalLimited(
     grid: number[][],
     maxDistance: number
@@ -697,7 +552,14 @@ export class GameGridGenerator {
           .map(() => [])
       );
 
-    const solidGrid = 0b1111;
+    /*
+      const visibilityMatrix: any[][] = Array(this.gridSize)
+      .fill(undefined)
+      .map(() =>
+        Array(this.gridSize)
+          .fill(undefined)
+          .map(() => new Set<string>())
+      );*/
 
     // Bresenham's line algorithm
     function* bresenhamLine(
@@ -740,18 +602,55 @@ export class GameGridGenerator {
       }
     }
 
+    /*
+
+    for (let y0 = 0; y0 < this.gridSize; y0++) {
+      for (let x0 = 0; x0 < this.gridSize; x0++) {
+        for (let y1 = 0; y1 < this.gridSize; y1++) {
+          for (let x1 = 0; x1 < this.gridSize; x1++) {
+            // Calculate Euclidean distance
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > maxDistance) {
+              continue; // Skip visibility calculation for this pair
+            }
+
+            let visible = true;
+            for (const point of bresenhamLine(x0, y0, x1, y1)) {
+              if (point.x === x0 && point.y === y0) continue;
+              if (grid[point.y][point.x] === GameGridGenerator.MATERIAL.ROCK) {
+                visible = false;
+                break;
+              }
+            }
+            if (visible) {
+              visibilityMatrix[y0][x0].add(`${x1},${y1}`);
+            }
+          }
+        }
+      }
+    } */
+
     return visibilityMatrix;
   }
 
+  /**
+   * Generates visibility from a single point, considering diagonal vision and maximum distance
+   *
+   * @param gy Grid y-coordinate of the point
+   * @param gx Grid x-coordinate of the point
+   * @param grid The game grid, represented as a 2D array. Each cell contains a material.
+   * @param maxDistance The maximum distance for visibility
+   * @returns A Set containing grid coordinates "x,y" of visible cells from the given point.
+   */
   generateVisibilityMatrixDiagonalLimitedPoint(
-    y0: number,
-    x0: number,
+    gy: number,
+    gx: number,
     grid: number[][],
     maxDistance: number
   ): any {
-    const visibility: any[] = Array();
-
-    const solidGrid = 0b1111;
+    const visibilitySet: any[] = Array();
 
     // Bresenham's line algorithm
     function* bresenhamLine(
@@ -785,35 +684,19 @@ export class GameGridGenerator {
     for (let y1 = 0; y1 < this.gridSize; y1++) {
       for (let x1 = 0; x1 < this.gridSize; x1++) {
         // Calculate Euclidean distance
-        const dx = x1 - x0;
-        const dy = y1 - y0;
+        const dx = x1 - gx;
+        const dy = y1 - gy;
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance > maxDistance) {
           continue; // Skip visibility calculation for this pair
         }
 
-        // To reduce redundant calculations, ensure (x1, y1) >= (x0, y0)
-        /*
-            if (y1 < y0 || (y1 === y0 && x1 < x0)) {
-              continue;
-            }
-            */
-
         let visible = true;
         let hitSolidWall = false;
         let wallDepth = 0;
-        for (const point of bresenhamLine(x0, y0, x1, y1)) {
-          if (point.x === x0 && point.y === y0) continue;
-          if (
-            point.x === x1 &&
-            point.y === y1 &&
-            grid[point.y][point.x] === solidGrid
-          ) {
-            //We are at the end of the line and this is visible
-            continue;
-          }
-
-          if (grid[point.y][point.x] === solidGrid) {
+        for (const point of bresenhamLine(gx, gy, x1, y1)) {
+          if (point.x === gx && point.y === gy) continue;
+          if (grid[point.y][point.x] === GameGridGenerator.MATERIAL.ROCK) {
             if (hitSolidWall) {
               wallDepth++; //Counting hou many layers we can see into the wall
               if (wallDepth > 4) {
@@ -832,74 +715,71 @@ export class GameGridGenerator {
           }
         }
         if (visible) {
-          visibility.push({ x: x1, y: y1 });
-          //visibilityMatrix[y1][x1].push({ x: x0, y: y0 }); // Mirror visibility
+          visibilitySet.push({ x: x1, y: y1 });
         }
       }
     }
 
-    return visibility;
+    return visibilitySet;
   }
+
+  /**
+   * Defining standard patterns that can be selected to
+   * build a full grid. 1 represents a rock block, 0 represents free space.
+   */
+  static predefined10x10Grids = [
+    [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 1, 0, 0, 0, 0, 1, 1, 0],
+      [0, 1, 1, 0, 0, 0, 0, 1, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 1, 0, 0, 0, 0, 1, 1, 0],
+      [0, 1, 1, 0, 0, 0, 0, 1, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+  ];
+
+  // Creating these for testing spawn logic
+  // The grids are mostly inaccessible
+  static predefined10x10ImpossibleGrids = [
+    [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 0, 0, 1, 1, 1],
+      [1, 1, 1, 1, 1, 0, 0, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ],
+    [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ],
+  ];
 }
-
-/**
- * Defining standard patterns that can be selected to
- * build a full grid.  X here represents a block
- * with walls on all four sides
- */
-const X = 0b1111;
-const preDefined10x10Grids = [
-  [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, X, X, X, 0, X, X, X, X, 0],
-    [0, X, 0, 0, 0, 0, 0, 0, X, 0],
-    [0, X, 0, 0, 0, 0, 0, 0, X, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, X, 0],
-    [0, X, 0, 0, 0, 0, 0, 0, X, 0],
-    [0, X, 0, 0, 0, 0, 0, 0, X, 0],
-    [0, X, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, X, X, 0, X, X, X, X, X, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  ],
-  [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, X, X, 0, 0, 0, 0, X, X, 0],
-    [0, X, X, 0, 0, 0, 0, X, X, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, X, X, 0, 0, 0, 0, X, X, 0],
-    [0, X, X, 0, 0, 0, 0, X, X, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  ],
-];
-
-// createing these for testing spawn logic
-// the grids are mostly in accessable
-const preDefined10x10ImpossibleGrids = [
-  [
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, 0, 0, X, X, X],
-    [X, X, X, X, X, 0, 0, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-  ],
-  [
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, 0, 0, X, X, X, X, X, X, X],
-    [X, 0, 0, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-    [X, X, X, X, X, X, X, X, X, X],
-  ],
-];

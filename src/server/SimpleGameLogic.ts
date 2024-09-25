@@ -67,29 +67,31 @@ export class SimpleGameLogic {
     this.onGridRefresh = onGridRefresh; // Assign the callback for grid restructuring
 
     /*
-    // This would generate a random pattern of walls
+    // This would generate a random pattern of rocks
     SimpleGameMetrics.grid = this.gridGen.generateRandomGrid();
     */
 
-    // Generate a grid from standard 10 X 10 blocks
+    // Generate a grid from cave generation
     console.log(generateLogWithTimestamp("Generating Grid"));
     this.SimpleGameMetrics.grid = this.gridGen.generateGrid("cave");
 
-    //initialize gridDamage matrix
+    // Initialize gridDamage matrix based on grid materials
     this.SimpleGameMetrics.gridDamage = Array(this.gridSize)
       .fill(undefined)
       .map(() => Array(this.gridSize).fill(0));
 
     for (let gy = 0; gy < this.gridSize; gy++) {
       for (let gx = 0; gx < this.gridSize; gx++) {
-        if (this.SimpleGameMetrics.grid[gy][gx] === 0b1111) {
+        if (
+          this.SimpleGameMetrics.grid[gy][gx] ===
+          GameGridGenerator.MATERIAL.ROCK
+        ) {
           this.SimpleGameMetrics.gridDamage[gy][gx] = 50;
         }
       }
     }
 
-    //this.gridGen.generateGridFromPredefinedPatterns(false);
-
+    // Calculate visibility matrix
     console.log(generateLogWithTimestamp("Calculating Visibility"));
     this.SimpleGameMetrics.visibilityMatrix =
       this.gridGen.generateVisibilityMatrixDiagonalLimited(
@@ -97,6 +99,7 @@ export class SimpleGameLogic {
         10
       );
 
+    // Add computer-controlled players
     console.log(generateLogWithTimestamp("Add Players"));
     for (let i = 0; i < computerPlayerCount; i++) {
       this.addNewComputerPlayer();
@@ -104,7 +107,7 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Add a new player controled by the computer to the game
+   * Add a new player controlled by the computer to the game
    */
   addNewComputerPlayer(): void {
     // Add the computer player
@@ -208,9 +211,8 @@ export class SimpleGameLogic {
         return;
       }
 
-      // Check for valid input values.  Must be between -1 and 1
-      if (direction < -1) direction = -1;
-      if (direction > 1) direction = 1;
+      // Check for valid input values. Must be between -1 and 1
+      direction = Math.max(-1, Math.min(1, direction));
 
       if (playerType.controlType === controlTypes.rocketShip) {
         player.vr = direction * this.SimpleGameMetrics.angularAcceleration;
@@ -221,10 +223,10 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Handle proportional forward back messages from the client
+   * Handle proportional forward/back messages from the client
    *
    * @param sessionID Session id of the client
-   * @param accel Forward back signal from -1 to 1
+   * @param accel Forward/back signal from -1 to 1
    * @returns
    */
   handleAccel(sessionID: string, accel: number): void {
@@ -246,11 +248,10 @@ export class SimpleGameLogic {
         return;
       }
 
-      // Check for valid input values.  Must be between -1 and 1
-      if (accel < -1) accel = -1;
-      if (accel > 1) accel = 1;
+      // Check for valid input values. Must be between -1 and 1
+      accel = Math.max(-1, Math.min(1, accel));
 
-      // adjust based on control type
+      // Adjust based on control type
       if (playerType.controlType === controlTypes.rocketShip && accel < 0) {
         accel = 0;
       }
@@ -285,7 +286,7 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Add a new player into the game.  Called when they join for the first time
+   * Add a new player into the game. Called when they join for the first time
    *
    * @param client The client object for this player
    * @param username The name selected by the player
@@ -301,7 +302,7 @@ export class SimpleGameLogic {
 
   /**
    * Generate a spawn location for the player ensuring that
-   * the player is not in a locked in block
+   * the player is not in a rock cell
    *
    * @returns The new position for the player
    */
@@ -311,9 +312,9 @@ export class SimpleGameLogic {
       y: Math.floor(Math.random() * this.SimpleGameMetrics.playAreaHeight),
     };
 
-    // Check if the spawn position is within a walled cell
-    while (this.isInWalledCell(spawnPosition.x, spawnPosition.y)) {
-      console.log("hit a block");
+    // Check if the spawn position is within a rock cell
+    while (this.isInRockCell(spawnPosition.x, spawnPosition.y)) {
+      console.log("Hit a rock block, generating a new spawn position");
       spawnPosition = {
         x: Math.floor(Math.random() * this.SimpleGameMetrics.playAreaWidth),
         y: Math.floor(Math.random() * this.SimpleGameMetrics.playAreaHeight),
@@ -324,18 +325,21 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Checks if a given point in game coordinates is located within a cell that has all four walls.
+   * Checks if a given point in game coordinates is located within a cell that is rock.
    *
    * @param x - The x-coordinate of the point in game coordinates.
    * @param y - The y-coordinate of the point in game coordinates.
-   * @returns True if the point is within a cell with all four walls, false otherwise.
+   * @returns True if the point is within a rock cell, false otherwise.
    */
-  isInWalledCell(x: number, y: number): boolean {
+  isInRockCell(x: number, y: number): boolean {
     const gridX = Math.floor(x / this.SimpleGameMetrics.cellSize);
     const gridY = Math.floor(y / this.SimpleGameMetrics.cellSize);
 
-    // Check if the cell at (gridX, gridY) has all walls
-    return this.SimpleGameMetrics.grid[gridY][gridX] === 0b1111;
+    // Check if the cell at (gridX, gridY) is rock
+    return (
+      this.SimpleGameMetrics.grid[gridY][gridX] ===
+      GameGridGenerator.MATERIAL.ROCK
+    );
   }
 
   /**
@@ -348,7 +352,7 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Update the player for the game loop including position and wall collisions
+   * Update the player for the game loop including position and rock collisions
    *
    * @param deltaTime
    * @param elapsedTime
@@ -388,8 +392,8 @@ export class SimpleGameLogic {
       const newX = player.x + newVx * deltaTime;
       const newY = player.y + newVy * deltaTime;
 
-      // Check for wall collisions
-      const playerCollisionCorrection = this.checkForWallCollision(
+      // Check for rock collisions
+      const playerCollisionCorrection = this.checkForRockCollision(
         player.x,
         player.y,
         newX,
@@ -408,7 +412,7 @@ export class SimpleGameLogic {
 
       player.direction += player.vr * deltaTime;
 
-      // wrap the player position if somehow we escaped
+      // Wrap the player position if somehow we escaped
       if (player.x > this.SimpleGameMetrics.playAreaWidth) {
         player.x = 0;
       } else if (player.x < 0) {
@@ -423,7 +427,7 @@ export class SimpleGameLogic {
 
       player.direction = (player.direction + 2 * Math.PI) % (2 * Math.PI);
 
-      // if the player is in firing mode, see if we can generate a new fire event
+      // If the player is in firing mode, see if we can generate a new fire event
       if (
         player.firing &&
         elapsedTime - player.lastFired >= playerType.fireDelayInterval
@@ -460,9 +464,8 @@ export class SimpleGameLogic {
         player.lastFired = elapsedTime;
       }
 
-      if (this.isInWalledCell(player.x, player.y)) {
-        // Not sure why this is happening...  you die and reset
-        // Respawn the hit player in a random location
+      if (this.isInRockCell(player.x, player.y)) {
+        // Player collided with rock, respawn
         const pos = this.generateSpawnPosition();
         player.x = pos.x;
         player.y = pos.y;
@@ -472,7 +475,9 @@ export class SimpleGameLogic {
         player.health = player.maxHealth;
         console.log(
           generateLogWithTimestamp(
-            "Player " + player.username + " punched into a wall"
+            "Player " +
+              player.username +
+              " collided with a rock and was respawned"
           )
         );
       }
@@ -480,167 +485,8 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Check to see if the player and laser collided
-   *
-   * @param player
-   * @param laser
-   * @returns
-   */
-  laserHit(player: Player, laser: Projectile): boolean {
-    const playerType = ShipDesignsMap.get(player.shipType);
-    if (playerType === undefined) {
-      console.error(
-        generateLogWithTimestamp(
-          "Unknown ship type: " + player.shipType + " for " + player.username
-        )
-      );
-      return false;
-    }
-
-    const playerRadius = playerType.collisionRadius;
-    const dx = laser.x - player.x;
-    const dy = laser.y - player.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    return distance <= playerRadius;
-  }
-
-  /**
-   * Update the position of the laser and check for time or out
-   * of bounds conditions when it should be removed
-   *
-   * @param deltaTime
-   * @param elapsedTime
-   * @param laser
-   * @returns
-   */
-  updateAndTimeLaser(
-    deltaTime: number,
-    elapsedTime: number,
-    laser: Projectile
-  ): boolean {
-    const newX = laser.x + laser.vx * deltaTime;
-    const newY = laser.y + laser.vy * deltaTime;
-    laser.remainingTime -= deltaTime;
-
-    // Check for wall collisions
-    const laserCollision = this.checkForWallCollision(
-      laser.x,
-      laser.y,
-      newX,
-      newY,
-      laser.vx,
-      laser.vy,
-      1,
-      10
-    );
-
-    laser.x = newX;
-    laser.y = newY;
-
-    const inBounds =
-      laser.x >= 0 &&
-      laser.x <= this.SimpleGameMetrics.playAreaWidth &&
-      laser.y >= 0 &&
-      laser.y <= this.SimpleGameMetrics.playAreaHeight;
-
-    // Keep the laser only if the remaining time is greater than zero
-    return laser.remainingTime > 0 && !laserCollision.hit && inBounds;
-  }
-
-  /**
-   * Update the state of the game for the next game cycle.
-   *
-   * @param deltaTime Time since the last game update in millis
-   * @param elapsedTime Time since game start in millis
-   */
-  update(deltaTime: number, elapsedTime: number): void {
-    // update the computer managed players
-    this.computerPlayers.forEach((computerPlayer) => {
-      computerPlayer.update(deltaTime, elapsedTime);
-    });
-
-    this.state.players.forEach((player, sessionId) => {
-      this.updatePlayer(deltaTime, elapsedTime, player, sessionId);
-    }); // end the player loop
-
-    // Update laser positions and reduce remaining time
-    // remove if the time limit is hit or it hit a wall
-    this.state.projectiles = this.state.projectiles.filter((laser) => {
-      return this.updateAndTimeLaser(deltaTime, elapsedTime, laser);
-    });
-
-    // Check for collisions between lasers and ships
-    for (const laser of this.state.projectiles) {
-      for (const player of this.state.players.values()) {
-        if (this.laserHit(player, laser)) {
-          // Laser hit a ship
-          const attacker = this.state.players.get(laser.ownerSessionId);
-
-          // check that you did not shoot yourself
-          if (
-            attacker !== null &&
-            attacker !== undefined &&
-            attacker !== player
-          ) {
-            // apply damage
-            player.health -= this.SimpleGameMetrics.laserDamage;
-
-            // Remove the laser
-            this.state.projectiles.splice(
-              this.state.projectiles.indexOf(laser),
-              1
-            );
-
-            // Was this a kill?
-            if (player.health <= 0) {
-              attacker.score += 1;
-
-              // Respawn the hit player in a random location
-              const pos = this.generateSpawnPosition();
-              player.x = pos.x;
-              player.y = pos.y;
-              player.vx = 0.0;
-              player.vy = 0.0;
-              player.direction = Math.random() * 2 * Math.PI;
-              player.health = player.maxHealth;
-
-              console.log(
-                generateLogWithTimestamp(
-                  "PlayerHit " +
-                    String(attacker.username) +
-                    " killed " +
-                    String(player.username) +
-                    ", " +
-                    String(attacker.username) +
-                    " score:" +
-                    String(attacker.score)
-                )
-              );
-            } else {
-              console.log(
-                generateLogWithTimestamp(
-                  "PlayerHit " +
-                    String(attacker.username) +
-                    " hit " +
-                    String(player.username)
-                )
-              );
-            }
-
-            break;
-          }
-        }
-      }
-    }
-
-    this.updateMetrics(elapsedTime);
-  }
-
-  /**
-   * Checks to see if there is a collision with a wall.  If there
-   * is it will return a new position relative to the wall and reduce
-   * the velocity in that direction to zero.
+   * Check to see if the player and projectile collided with rocks.
+   * If there is a collision, it adjusts the position and velocity accordingly.
    *
    * @param x Initial x position of entity
    * @param y Initial y position of entity
@@ -649,10 +495,10 @@ export class SimpleGameLogic {
    * @param vx New proposed x velocity
    * @param vy New proposed y velocity
    * @param radius Collision radius
-   * @param damage Damage done to wall
+   * @param damage Damage done to rock
    * @returns New entity position and velocity and indication of collision
    */
-  checkForWallCollision(
+  checkForRockCollision(
     x: number,
     y: number,
     newX: number,
@@ -670,41 +516,166 @@ export class SimpleGameLogic {
       hit: false,
     };
 
-    // Find the grid cell that we are currently in
-    let gridXY = this.gridPosForPoint({ x, y });
-    const gridCellA = this.SimpleGameMetrics.grid[gridXY.y][gridXY.x];
-    newVal = this.checkGridWallCollision(
-      gridCellA,
-      gridXY,
-      newVal,
-      radius,
-      damage
-    );
+    // Calculate the bounding box of the ship's collision area
+    const minX = newX - radius;
+    const maxX = newX + radius;
+    const minY = newY - radius;
+    const maxY = newY + radius;
 
-    if (!newVal.hit) {
-      // check the grid we are moving into
-      gridXY = this.gridPosForPoint({ x, y });
-      const gridCellB = this.SimpleGameMetrics.grid[gridXY.y][gridXY.x];
+    // Determine the range of grid cells to check
+    const startGridX = Math.floor(minX / this.SimpleGameMetrics.cellSize);
+    const endGridX = Math.floor(maxX / this.SimpleGameMetrics.cellSize);
+    const startGridY = Math.floor(minY / this.SimpleGameMetrics.cellSize);
+    const endGridY = Math.floor(maxY / this.SimpleGameMetrics.cellSize);
 
-      if (gridCellA !== gridCellB) {
-        newVal = this.checkGridWallCollision(
-          gridCellB,
-          gridXY,
-          newVal,
-          radius,
-          damage
-        );
+    for (let gridY = startGridY; gridY <= endGridY; gridY++) {
+      for (let gridX = startGridX; gridX <= endGridX; gridX++) {
+        // Boundary check
+        if (
+          gridY < 0 ||
+          gridY >= this.SimpleGameMetrics.grid.length ||
+          gridX < 0 ||
+          gridX >= this.SimpleGameMetrics.grid[0].length
+        ) {
+          continue; // Skip out-of-bounds cells
+        }
 
-        if (newVal.hit) {
-          console.log(
-            generateLogWithTimestamp(
-              "Hit found on the second grid..............."
-            )
+        const gridCell = this.SimpleGameMetrics.grid[gridY][gridX];
+
+        if (gridCell === GameGridGenerator.MATERIAL.ROCK) {
+          // Get the center of the grid cell
+          const cellCenterX =
+            gridX * this.SimpleGameMetrics.cellSize +
+            this.SimpleGameMetrics.cellSize / 2;
+          const cellCenterY =
+            gridY * this.SimpleGameMetrics.cellSize +
+            this.SimpleGameMetrics.cellSize / 2;
+
+          // Calculate the closest point on the cell to the ship's new position
+          const closestX = this.clamp(
+            newX,
+            cellCenterX - this.SimpleGameMetrics.cellSize / 2,
+            cellCenterX + this.SimpleGameMetrics.cellSize / 2
+          );
+          const closestY = this.clamp(
+            newY,
+            cellCenterY - this.SimpleGameMetrics.cellSize / 2,
+            cellCenterY + this.SimpleGameMetrics.cellSize / 2
+          );
+
+          // Calculate the distance between the ship's center and this closest point
+          const distanceX = newX - closestX;
+          const distanceY = newY - closestY;
+          const distanceSquared = distanceX * distanceX + distanceY * distanceY;
+          const collisionDistance = radius;
+
+          if (distanceSquared < collisionDistance * collisionDistance) {
+            // Collision detected
+            newVal.hit = true;
+
+            const distance = Math.sqrt(distanceSquared) || 1; // Prevent division by zero
+
+            // Normal vector from the rock to the ship
+            const normalX = distanceX / distance;
+            const normalY = distanceY / distance;
+
+            // Penetration depth
+            const penetration = collisionDistance - distance;
+
+            // Adjust the ship's position to resolve the collision
+            newVal.newX += normalX * penetration;
+            newVal.newY += normalY * penetration;
+
+            // Adjust the velocity by removing the component along the normal
+            const velocityDotNormal = newVal.vx * normalX + newVal.vy * normalY;
+            if (velocityDotNormal < 0) {
+              // Only adjust if moving towards the rock
+              newVal.vx -= velocityDotNormal * normalX;
+              newVal.vy -= velocityDotNormal * normalY;
+            }
+
+            // Apply damage to the rock
+            this.SimpleGameMetrics.gridDamage[gridY][gridX] -= damage;
+
+            if (this.SimpleGameMetrics.gridDamage[gridY][gridX] <= 0) {
+              // Rock is destroyed, set cell to free
+              this.SimpleGameMetrics.grid[gridY][gridX] =
+                GameGridGenerator.MATERIAL.FREE;
+              console.log(`Rock destroyed at y:${gridY} x:${gridX}`);
+
+              // Recalculate visibility for affected cells
+              this.recalculateVisibility(gridY, gridX);
+            }
+          }
+        }
+      }
+    }
+
+    return newVal;
+  }
+
+  /**
+   * Utility function to clamp a value between a minimum and maximum.
+   *
+   * @param value The value to clamp
+   * @param min The minimum allowed value
+   * @param max The maximum allowed value
+   * @returns The clamped value
+   */
+  private clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  /**
+   * Recalculates visibility for cells affected by rock destruction
+   *
+   * @param gy Grid y-coordinate
+   * @param gx Grid x-coordinate
+   */
+  private recalculateVisibility(gy: number, gx: number): void {
+    if (gy < 0 || gy >= this.gridSize || gx < 0 || gx >= this.gridSize) return;
+
+    // Recalculate visibility for the destroyed rock cell
+    this.SimpleGameMetrics.visibilityMatrix[gy][gx] =
+      this.gridGen.generateVisibilityMatrixDiagonalLimitedPoint(
+        gy,
+        gx,
+        this.SimpleGameMetrics.grid,
+        10
+      );
+
+    // Notify clients about the grid update
+    this.notifyClientsGridUpdate(gy, gx);
+  }
+
+  /**
+   * Notify clients of updates to the grid around a point
+   *
+   * @param gy  Grid y-position updated
+   * @param gx  Grid x-position updated
+   */
+  notifyClientsGridUpdate(gy: number, gx: number) {
+    if (this.onGridRefresh) {
+      for (let patchY = gy - 10; patchY < gy + 10; patchY++) {
+        for (let patchX = gx - 10; patchX < gx + 10; patchX++) {
+          if (
+            patchY < 0 ||
+            patchY >= this.SimpleGameMetrics.gridSize ||
+            patchX < 0 ||
+            patchX >= this.SimpleGameMetrics.gridSize
+          )
+            continue;
+
+          // Invoke the callback to notify clients
+          this.onGridRefresh(
+            patchY,
+            patchX,
+            this.SimpleGameMetrics.grid[patchY][patchX],
+            this.SimpleGameMetrics.visibilityMatrix[patchY][patchX]
           );
         }
       }
     }
-    return newVal;
   }
 
   /**
@@ -736,190 +707,147 @@ export class SimpleGameLogic {
   }
 
   /**
-   * Checks for collisions with a specific grid location walls
+   * Update the state of the game for the next game cycle.
    *
-   * @param gridCell The bitmask value for this cell indicating walls or not on the four sides
-   * @param gridPos The x y position of this grid
-   * @param newVal Holds the position before and after game cycle update
-   * @param radius Collision radius for this entity
-   * @returns
+   * @param deltaTime Time since the last game update in millis
+   * @param elapsedTime Time since game start in millis
    */
-  checkGridWallCollision(
-    gridCell: number,
-    gridPos: { x: number; y: number },
-    newVal: {
-      newX: number;
-      newY: number;
-      vx: number;
-      vy: number;
-      hit: boolean;
-    },
-    radius: number,
-    damage: number
-  ): { newX: number; newY: number; vx: number; vy: number; hit: boolean } {
-    let hy = 0;
-    let hx = 0;
+  update(deltaTime: number, elapsedTime: number): void {
+    // Update the computer managed players
+    this.computerPlayers.forEach((computerPlayer) => {
+      computerPlayer.update(deltaTime, elapsedTime);
+    });
 
-    // Check for collisions with the left and right
-    const newXinCell =
-      newVal.newX - gridPos.x * this.SimpleGameMetrics.cellSize;
-    if (
-      (gridCell & this.gridGen.wallMask.R) !== 0 &&
-      newXinCell + radius > this.SimpleGameMetrics.cellSize
-    ) {
-      // Collided with right wall
-      newVal.hit = true;
-      hy = gridPos.y;
-      hx = gridPos.x + 1;
+    // Update all players
+    this.state.players.forEach((player, sessionId) => {
+      this.updatePlayer(deltaTime, elapsedTime, player, sessionId);
+    });
 
-      newVal.vx = 0; // Stop horizontal movement
-      newVal.newX =
-        gridPos.x * this.SimpleGameMetrics.cellSize +
-        this.SimpleGameMetrics.cellSize -
-        radius; // Move to the left of the wall
-    } else if (
-      (gridCell & this.gridGen.wallMask.L) !== 0 &&
-      newXinCell - radius < 0
-    ) {
-      // Collided with left wall
-      newVal.hit = true;
-      hy = gridPos.y;
-      hx = gridPos.x - 1;
+    // Update projectiles
+    this.state.projectiles = this.state.projectiles.filter((laser) => {
+      return this.updateAndTimeProjectile(deltaTime, elapsedTime, laser);
+    });
 
-      newVal.vx = 0; // Stop horizontal movement
-      newVal.newX = gridPos.x * this.SimpleGameMetrics.cellSize + radius; // Move to the right of the wall
-    }
+    // Check for collisions between projectiles and ships
+    for (const laser of this.state.projectiles) {
+      for (const player of this.state.players.values()) {
+        if (this.projectileHit(player, laser)) {
+          // Projectile hit a ship
+          const attacker = this.state.players.get(laser.ownerSessionId);
 
-    // Check for collisions with the top and bottom
-    const newYinCell =
-      newVal.newY - gridPos.y * this.SimpleGameMetrics.cellSize;
-    if (
-      (gridCell & this.gridGen.wallMask.B) !== 0 &&
-      newYinCell + radius > this.SimpleGameMetrics.cellSize
-    ) {
-      // Collided with bottom wall
-      newVal.hit = true;
-      hy = gridPos.y + 1;
-      hx = gridPos.x;
+          // Check that you did not shoot yourself
+          if (attacker && attacker !== player) {
+            // Apply damage
+            player.health -= this.SimpleGameMetrics.laserDamage;
 
-      newVal.vy = 0; // Stop vertical movement
-      newVal.newY =
-        gridPos.y * this.SimpleGameMetrics.cellSize +
-        this.SimpleGameMetrics.cellSize -
-        radius; // Move above the wall
-    } else if (
-      (gridCell & this.gridGen.wallMask.T) !== 0 &&
-      newYinCell - radius < 0
-    ) {
-      // Collided with top wall
-      newVal.hit = true;
-      hy = gridPos.y - 1;
-      hx = gridPos.x;
-
-      newVal.vy = 0; // Stop vertical movement
-      newVal.newY = gridPos.y * this.SimpleGameMetrics.cellSize + radius; // Move below the wall
-    }
-
-    //A wall was hit, update the damage on the wall and if it falls to zero
-    //remove it from the grid
-    if (newVal.hit) {
-      this.SimpleGameMetrics.gridDamage[hy][hx] -= damage;
-
-      if (this.SimpleGameMetrics.gridDamage[hy][hx] <= 0) {
-        //Grid square is destroyed
-
-        console.log("Grid destroyed y:" + hy + " x:" + hx);
-
-        // reset this and prior position to empty
-        //this.SimpleGameMetrics.grid[gridPos.y][gridPos.x] = 0b0000;
-        this.SimpleGameMetrics.grid[hy][hx] = 0b0000;
-
-        if (hy > 0) {
-          if (this.SimpleGameMetrics.grid[hy - 1][hx] === 0b1111) {
-            this.SimpleGameMetrics.grid[hy][hx] |= this.gridGen.wallMask.T;
-          } else if (
-            this.SimpleGameMetrics.grid[hy - 1][hx] & this.gridGen.wallMask.B
-          ) {
-            this.SimpleGameMetrics.grid[hy - 1][hx] ^= this.gridGen.wallMask.B;
-          }
-        }
-
-        if (hy < this.SimpleGameMetrics.gridSize - 1) {
-          if (this.SimpleGameMetrics.grid[hy + 1][hx] === 0b1111) {
-            this.SimpleGameMetrics.grid[hy][hx] |= this.gridGen.wallMask.B;
-          } else if (
-            this.SimpleGameMetrics.grid[hy + 1][hx] & this.gridGen.wallMask.T
-          ) {
-            this.SimpleGameMetrics.grid[hy + 1][hx] ^= this.gridGen.wallMask.T;
-          }
-        }
-
-        if (hx > 0) {
-          if (this.SimpleGameMetrics.grid[hy][hx - 1] === 0b1111) {
-            this.SimpleGameMetrics.grid[hy][hx] |= this.gridGen.wallMask.L;
-          } else if (
-            this.SimpleGameMetrics.grid[hy][hx - 1] & this.gridGen.wallMask.R
-          ) {
-            this.SimpleGameMetrics.grid[hy][hx - 1] ^= this.gridGen.wallMask.R;
-          }
-        }
-
-        if (hx < this.SimpleGameMetrics.gridSize - 1) {
-          if (this.SimpleGameMetrics.grid[hy][hx + 1] === 0b1111) {
-            this.SimpleGameMetrics.grid[hy][hx] |= this.gridGen.wallMask.R;
-          } else if (
-            this.SimpleGameMetrics.grid[hy][hx + 1] & this.gridGen.wallMask.L
-          ) {
-            this.SimpleGameMetrics.grid[hy][hx + 1] ^= this.gridGen.wallMask.L;
-          }
-        }
-
-        //recalc visibility
-        for (const vpt of this.SimpleGameMetrics.visibilityMatrix[hy][hx]) {
-          this.SimpleGameMetrics.visibilityMatrix[vpt.y][vpt.x] =
-            this.gridGen.generateVisibilityMatrixDiagonalLimitedPoint(
-              vpt.y,
-              vpt.x,
-              this.SimpleGameMetrics.grid,
-              10
+            // Remove the projectile
+            this.state.projectiles.splice(
+              this.state.projectiles.indexOf(laser),
+              1
             );
-        }
 
-        this.notifyClientsGridUpdate(hy, hx);
+            // Was this a kill?
+            if (player.health <= 0) {
+              attacker.score += 1;
+
+              // Respawn the hit player in a random location
+              const pos = this.generateSpawnPosition();
+              player.x = pos.x;
+              player.y = pos.y;
+              player.vx = 0.0;
+              player.vy = 0.0;
+              player.direction = Math.random() * 2 * Math.PI;
+              player.health = player.maxHealth;
+
+              console.log(
+                generateLogWithTimestamp(
+                  `PlayerHit ${attacker.username} killed ${player.username}, ${attacker.username} score: ${attacker.score}`
+                )
+              );
+            } else {
+              console.log(
+                generateLogWithTimestamp(
+                  `PlayerHit ${attacker.username} hit ${player.username}`
+                )
+              );
+            }
+
+            break;
+          }
+        }
       }
     }
 
-    return newVal;
+    this.updateMetrics(elapsedTime);
   }
 
   /**
-   * Notify clients of updates to the grid aound a point
+   * Checks if a projectile hit a player
    *
-   * @param gy  Position updated in grid
-   * @param gx  Position updated in grid
+   * @param player The player to check against
+   * @param projectile The projectile to check
+   * @returns True if hit, false otherwise
    */
-  notifyClientsGridUpdate(gy: number, gx: number) {
-    if (this.onGridRefresh) {
-      for (let patchY = gy - 10; patchY < gy + 10; patchY++) {
-        for (let patchX = gx - 10; patchX < gx + 10; patchX++) {
-          if (
-            patchY < 0 ||
-            patchY >= this.SimpleGameMetrics.gridSize ||
-            patchX < 0 ||
-            patchX >= this.SimpleGameMetrics.gridSize
-          )
-            continue;
-
-          // Invoke the callback to notify clients
-          this.onGridRefresh(
-            patchY,
-            patchX,
-            this.SimpleGameMetrics.grid[patchY][patchX],
-            this.SimpleGameMetrics.visibilityMatrix[patchY][patchX]
-          );
-        }
-      }
+  private projectileHit(player: Player, projectile: Projectile): boolean {
+    const playerType = ShipDesignsMap.get(player.shipType);
+    if (playerType === undefined) {
+      console.error(
+        generateLogWithTimestamp(
+          "Unknown ship type: " + player.shipType + " for " + player.username
+        )
+      );
+      return false;
     }
+
+    const playerRadius = playerType.collisionRadius;
+    const dx = projectile.x - player.x;
+    const dy = projectile.y - player.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    return distance <= playerRadius;
+  }
+
+  /**
+   * Update the position of the projectile and check for time or out
+   * of bounds conditions when it should be removed
+   *
+   * @param deltaTime
+   * @param elapsedTime
+   * @param projectile
+   * @returns
+   */
+  private updateAndTimeProjectile(
+    deltaTime: number,
+    elapsedTime: number,
+    projectile: Projectile
+  ): boolean {
+    const newX = projectile.x + projectile.vx * deltaTime;
+    const newY = projectile.y + projectile.vy * deltaTime;
+    projectile.remainingTime -= deltaTime;
+
+    // Check for rock collisions
+    const projectileCollision = this.checkForRockCollision(
+      projectile.x,
+      projectile.y,
+      newX,
+      newY,
+      projectile.vx,
+      projectile.vy,
+      1,
+      10
+    );
+
+    projectile.x = newX;
+    projectile.y = newY;
+
+    const inBounds =
+      projectile.x >= 0 &&
+      projectile.x <= this.SimpleGameMetrics.playAreaWidth &&
+      projectile.y >= 0 &&
+      projectile.y <= this.SimpleGameMetrics.playAreaHeight;
+
+    // Keep the projectile only if the remaining time is greater than zero and it hasn't hit a rock and is in bounds
+    return projectile.remainingTime > 0 && !projectileCollision.hit && inBounds;
   }
 
   /**
@@ -927,7 +855,7 @@ export class SimpleGameLogic {
    *
    * @param elapsedTime Time since start of game
    */
-  updateMetrics(elapsedTime: number): void {
+  private updateMetrics(elapsedTime: number): void {
     // Update client count
     this.state.currentClientsCount = this.state.players.size;
     this.state.maxClientsCountLastMinute = Math.max(
@@ -939,7 +867,7 @@ export class SimpleGameLogic {
     this.gameUpdateTimestamps.push(elapsedTime);
     if (this.gameUpdateTimestamps.length > 50) {
       const firstTimestamp = this.gameUpdateTimestamps.shift();
-      const secondsPassed = (elapsedTime - firstTimestamp) / 1000;
+      const secondsPassed = (elapsedTime - firstTimestamp!) / 1000;
       this.state.gameUpdateCyclesPerSecond = 50 / secondsPassed;
     }
 
