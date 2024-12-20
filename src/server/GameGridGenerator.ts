@@ -218,19 +218,34 @@ export class GameGridGenerator {
     return grid;
   }
 
-  /**
-   * Ensures that all cave regions are connected
-   *
-   * @param grid The current grid
-   * @returns The modified grid with all regions connected
-   */
   private ensureConnectivity(grid: number[][]): number[][] {
     const visited = Array(this.gridSize)
       .fill(false)
       .map(() => Array(this.gridSize).fill(false));
 
-    const queue: Array<{ x: number; y: number }> = [{ x: 1, y: 1 }];
-    visited[1][1] = true;
+    // Step 1: Find a starting free cell
+    let startFound = false;
+    let startX = 1;
+    let startY = 1;
+
+    for (let y = 1; y < this.gridSize - 1 && !startFound; y++) {
+      for (let x = 1; x < this.gridSize - 1 && !startFound; x++) {
+        if (grid[y][x] === GameGridGenerator.MATERIAL.FREE) {
+          startX = x;
+          startY = y;
+          startFound = true;
+        }
+      }
+    }
+
+    if (!startFound) {
+      // No free cells found; return the grid as is
+      return grid;
+    }
+
+    // Step 2: BFS to mark all connected free cells
+    const queue: Array<{ x: number; y: number }> = [{ x: startX, y: startY }];
+    visited[startY][startX] = true;
 
     while (queue.length > 0) {
       const { x, y } = queue.pop()!;
@@ -261,11 +276,11 @@ export class GameGridGenerator {
       }
     }
 
-    // Find disconnected regions and connect them
+    // Step 3: Connect disconnected regions
     for (let y = 1; y < this.gridSize - 1; y++) {
       for (let x = 1; x < this.gridSize - 1; x++) {
         if (grid[y][x] === GameGridGenerator.MATERIAL.FREE && !visited[y][x]) {
-          // Find the nearest connected cell
+          // Find a path from this cell to the main connected region
           const path = this.findPath(grid, x, y, visited);
           if (path.length > 0) {
             // Carve the path by setting cells to free
@@ -282,7 +297,8 @@ export class GameGridGenerator {
   }
 
   /**
-   * Finds a path from a disconnected cell to the nearest connected region
+   * Finds a path from a disconnected cell to the nearest connected region,
+   * allowing carving through rocks.
    *
    * @param grid The grid
    * @param startX The starting x coordinate
@@ -310,7 +326,7 @@ export class GameGridGenerator {
       const current = queue.shift()!;
       const { x, y, path } = current;
 
-      // Check if this cell is connected to the main region
+      // If this cell is part of the main connected region, return the path
       if (visited[y][x]) {
         return path;
       }
@@ -332,8 +348,7 @@ export class GameGridGenerator {
           nx < this.gridSize - 1 &&
           ny > 0 &&
           ny < this.gridSize - 1 &&
-          !localVisited[ny][nx] &&
-          grid[ny][nx] === GameGridGenerator.MATERIAL.FREE
+          !localVisited[ny][nx]
         ) {
           localVisited[ny][nx] = true;
           queue.push({
@@ -345,6 +360,7 @@ export class GameGridGenerator {
       }
     }
 
+    // No path found
     return [];
   }
 

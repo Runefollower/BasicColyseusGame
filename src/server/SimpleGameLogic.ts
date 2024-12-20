@@ -404,11 +404,15 @@ export class SimpleGameLogic {
         1
       );
 
+      console.log("A1 y: " + player.y + " x: " + player.x);
+
       // Update player position and velocity
       player.vx = playerCollisionCorrection.vx;
       player.vy = playerCollisionCorrection.vy;
       player.x = playerCollisionCorrection.newX;
       player.y = playerCollisionCorrection.newY;
+
+      console.log("A2 y: " + player.y + " x: " + player.x);
 
       player.direction += player.vr * deltaTime;
 
@@ -466,6 +470,7 @@ export class SimpleGameLogic {
 
       if (this.isInRockCell(player.x, player.y)) {
         // Player collided with rock, respawn
+        console.log("B y: " + player.y + " x: " + player.x);
         const pos = this.generateSpawnPosition();
         player.x = pos.x;
         player.y = pos.y;
