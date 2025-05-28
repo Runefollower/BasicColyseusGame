@@ -5,45 +5,37 @@ import { GameGridGenerator } from "./GameGridGenerator";
 import { ComputerPlayer } from "./ComputerPlayer";
 import { ShipDesigns, ShipDesignsMap, controlTypes } from "./ShipDesigns";
 import { projectileTypes } from "./ShipDesignTypes";
-
-// Controls for metrics updates
-let nextMinuteUpdate = 0;
-let nextLogMetricsUpdate = 0;
-
-const computerPlayerCount = 1;
+import { GAME_CONFIG, type GameConfig } from "./config";
 
 /**
  * Main class for the game logic
  */
 export class SimpleGameLogic {
-  gridSize = 100;
-  SimpleGameMetrics = {
-    gridSize: this.gridSize,
-    playAreaWidth: this.gridSize * 100,
-    playAreaHeight: this.gridSize * 100,
-    cellSize: 100,
-    acceleration: 0.01,
-    angularAcceleration: 0.005,
-    drag: -0.01,
-    tankSpeed: 0.1,
-    laserSpeed: 0.4,
-    fireDelayInterval: 200,
-    laserDamage: 25,
-    ShipDesigns,
-    grid: [
-      [0, 0],
-      [0, 0],
-    ],
-    gridDamage: [
-      [0, 0],
-      [0, 0],
-    ],
-    visibilityMatrix: [],
+  private config: GameConfig;
+  private gridGen!: GameGridGenerator;
+  private nextMinuteUpdate = 0;
+  private nextLogMetricsUpdate = 0;
+
+  public SimpleGameMetrics!: {
+    gridSize: number;
+    playAreaWidth: number;
+    playAreaHeight: number;
+    cellSize: number;
+    acceleration: number;
+    angularAcceleration: number;
+    drag: number;
+    tankSpeed: number;
+    laserSpeed: number;
+    fireDelayInterval: number;
+    laserDamage: number;
+    ShipDesigns: typeof ShipDesigns;
+    grid: number[][];
+    gridDamage: number[][];
+    visibilityMatrix: any[][];
   };
 
   state: GameState;
   gameUpdateTimestamps: number[];
-  gridGen = new GameGridGenerator(this.gridSize);
   computerPlayers: ComputerPlayer[];
   private onGridRefresh: (
     gy: number,
@@ -59,29 +51,48 @@ export class SimpleGameLogic {
       gx: number,
       gridElement: number,
       visibilityMatrix: any
-    ) => void
+    ) => void,
+    config: GameConfig = GAME_CONFIG
   ) {
+    this.config = config;
+    this.gridGen = new GameGridGenerator(this.config.gridSize);
     this.state = state;
     this.gameUpdateTimestamps = [];
     this.computerPlayers = [];
-    this.onGridRefresh = onGridRefresh; // Assign the callback for grid restructuring
+    this.onGridRefresh = onGridRefresh;
 
-    /*
-    // This would generate a random pattern of rocks
-    SimpleGameMetrics.grid = this.gridGen.generateRandomGrid();
-    */
+    // Initialize metrics from configuration
+    this.SimpleGameMetrics = {
+      gridSize: this.config.gridSize,
+      playAreaWidth: this.config.gridSize * this.config.cellSize,
+      playAreaHeight: this.config.gridSize * this.config.cellSize,
+      cellSize: this.config.cellSize,
+      acceleration: this.config.physics.acceleration,
+      angularAcceleration: this.config.physics.angularAcceleration,
+      drag: this.config.physics.drag,
+      tankSpeed: this.config.physics.tankSpeed,
+      laserSpeed: this.config.physics.laserSpeed,
+      fireDelayInterval: this.config.projectiles.fireDelayInterval,
+      laserDamage: this.config.projectiles.laserDamage,
+      ShipDesigns,
+      grid: [],
+      gridDamage: [],
+      visibilityMatrix: [],
+    };
 
     // Generate a grid from cave generation
     console.log(generateLogWithTimestamp("Generating Grid"));
     this.SimpleGameMetrics.grid = this.gridGen.generateGrid("cave");
 
     // Initialize gridDamage matrix based on grid materials
-    this.SimpleGameMetrics.gridDamage = Array(this.gridSize)
+    this.SimpleGameMetrics.gridDamage = Array(
+      this.SimpleGameMetrics.gridSize
+    )
       .fill(undefined)
-      .map(() => Array(this.gridSize).fill(0));
+      .map(() => Array(this.SimpleGameMetrics.gridSize).fill(0));
 
-    for (let gy = 0; gy < this.gridSize; gy++) {
-      for (let gx = 0; gx < this.gridSize; gx++) {
+    for (let gy = 0; gy < this.SimpleGameMetrics.gridSize; gy++) {
+      for (let gx = 0; gx < this.SimpleGameMetrics.gridSize; gx++) {
         if (
           this.SimpleGameMetrics.grid[gy][gx] ===
           GameGridGenerator.MATERIAL.ROCK
@@ -96,12 +107,12 @@ export class SimpleGameLogic {
     this.SimpleGameMetrics.visibilityMatrix =
       this.gridGen.generateVisibilityMatrixDiagonalLimited(
         this.SimpleGameMetrics.grid,
-        10
+        this.config.visibilityDiagonalLimit
       );
 
     // Add computer-controlled players
     console.log(generateLogWithTimestamp("Add Players"));
-    for (let i = 0; i < computerPlayerCount; i++) {
+    for (let i = 0; i < this.config.computerPlayerCount; i++) {
       this.addNewComputerPlayer();
     }
   }
@@ -638,7 +649,12 @@ export class SimpleGameLogic {
    * @param gx Grid x-coordinate
    */
   private recalculateVisibility(gy: number, gx: number): void {
-    if (gy < 0 || gy >= this.gridSize || gx < 0 || gx >= this.gridSize) return;
+    if (
+      gy < 0 ||
+      gy >= this.SimpleGameMetrics.gridSize ||
+      gx < 0 ||
+      gx >= this.SimpleGameMetrics.gridSize
+    ) return;
 
     // Recalculate visibility for the destroyed rock cell
     this.SimpleGameMetrics.visibilityMatrix[gy][gx] =
@@ -646,7 +662,7 @@ export class SimpleGameLogic {
         gy,
         gx,
         this.SimpleGameMetrics.grid,
-        10
+        this.config.visibilityDiagonalLimit
       );
 
     // Notify clients about the grid update
@@ -661,8 +677,16 @@ export class SimpleGameLogic {
    */
   notifyClientsGridUpdate(gy: number, gx: number) {
     if (this.onGridRefresh) {
-      for (let patchY = gy - 10; patchY < gy + 10; patchY++) {
-        for (let patchX = gx - 10; patchX < gx + 10; patchX++) {
+      for (
+        let patchY = gy - this.config.visibilityDiagonalLimit;
+        patchY < gy + this.config.visibilityDiagonalLimit;
+        patchY++
+      ) {
+        for (
+          let patchX = gx - this.config.visibilityDiagonalLimit;
+          patchX < gx + this.config.visibilityDiagonalLimit;
+          patchX++
+        ) {
           if (
             patchY < 0 ||
             patchY >= this.SimpleGameMetrics.gridSize ||
@@ -885,13 +909,13 @@ export class SimpleGameLogic {
     });
 
     // Reset max clients count every minute
-    if (elapsedTime > nextMinuteUpdate) {
+    if (elapsedTime > this.nextMinuteUpdate) {
       this.state.maxClientsCountLastMinute = this.state.currentClientsCount;
-      nextMinuteUpdate = elapsedTime + 60000;
+      this.nextMinuteUpdate = elapsedTime + 60000;
     }
 
-    if (elapsedTime > nextLogMetricsUpdate && this.state.players.size > 0) {
-      nextLogMetricsUpdate = elapsedTime + 60000;
+    if (elapsedTime > this.nextLogMetricsUpdate && this.state.players.size > 0) {
+      this.nextLogMetricsUpdate = elapsedTime + 60000;
 
       console.log(
         generateLogWithTimestamp(
