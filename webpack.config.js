@@ -12,9 +12,18 @@ module.exports = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: "ts-loader",
         include: path.resolve(__dirname, "src/client"),
         exclude: /node_modules/,
+        use: {
+          loader: "ts-loader",
+          options: {
+            transpileOnly: true,
+            compilerOptions: {
+              declaration: false,
+              declarationMap: false
+            }
+          }
+        }
       },
     ],
   },

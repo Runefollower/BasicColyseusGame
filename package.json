@@ -10,7 +10,7 @@
     "start": "ts-node src/server/index.ts -d",
     "start:dev": "ts-node-dev --watch \"src/**/*\" --respawn --transpile-only src/server/index.ts -d",
     "start:prod": "node dist/server/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "copy": "copyfiles -u 1 \"src/**/*.html\" \"dist/\"",
     "lint": "eslint --ext .js,.ts . --ignore-path .gitignore",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
@@ -42,6 +42,9 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.4",
     "webpack": "^5.83.1",
-    "webpack-cli": "^5.1.1"
+    "webpack-cli": "^5.1.1",
+    "jest": "^29.6.0",
+    "ts-jest": "^29.1.0",
+    "@types/jest": "^29.5.0"
   }
 }

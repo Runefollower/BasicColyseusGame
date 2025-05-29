@@ -1,11 +1,15 @@
 import { type Client } from "colyseus";
-import { type GameState, Player, Projectile } from "./GameState";
+import { type GameState, Player, type Projectile } from "./GameState";
 import { generateLogWithTimestamp } from "./ServerTools";
 import { GameGridGenerator } from "./GameGridGenerator";
-import { ComputerPlayer } from "./ComputerPlayer";
 import { ShipDesigns, ShipDesignsMap, controlTypes } from "./ShipDesigns";
-import { projectileTypes } from "./ShipDesignTypes";
+import type { ShipType } from "./ShipDesignTypes";
 import { GAME_CONFIG, type GameConfig } from "./config";
+import { CollisionManager } from "./CollisionManager";
+import { PhysicsEngine } from "./PhysicsEngine";
+import { ComputerPlayerManager } from "./ComputerPlayerManager";
+import { ProjectileManager } from "./ProjectileManager";
+import { MetricsManager } from "./MetricsManager";
 
 /**
  * Main class for the game logic
@@ -13,9 +17,6 @@ import { GAME_CONFIG, type GameConfig } from "./config";
 export class SimpleGameLogic {
   private config: GameConfig;
   private gridGen!: GameGridGenerator;
-  private nextMinuteUpdate = 0;
-  private nextLogMetricsUpdate = 0;
-
   public SimpleGameMetrics!: {
     gridSize: number;
     playAreaWidth: number;
@@ -28,21 +29,25 @@ export class SimpleGameLogic {
     laserSpeed: number;
     fireDelayInterval: number;
     laserDamage: number;
-    ShipDesigns: typeof ShipDesigns;
+    ShipDesigns: ShipType[];
     grid: number[][];
     gridDamage: number[][];
     visibilityMatrix: any[][];
   };
 
   state: GameState;
-  gameUpdateTimestamps: number[];
-  computerPlayers: ComputerPlayer[];
   private onGridRefresh: (
     gy: number,
     gx: number,
     gridElement: number,
     visibilityMatrix: any
   ) => void;
+
+  private collisionManager!: CollisionManager;
+  private physicsEngine!: PhysicsEngine;
+  private computerManager!: ComputerPlayerManager;
+  private projectileManager!: ProjectileManager;
+  private metricsManager!: MetricsManager;
 
   constructor(
     state: GameState,
@@ -57,8 +62,6 @@ export class SimpleGameLogic {
     this.config = config;
     this.gridGen = new GameGridGenerator(this.config.gridSize);
     this.state = state;
-    this.gameUpdateTimestamps = [];
-    this.computerPlayers = [];
     this.onGridRefresh = onGridRefresh;
 
     // Initialize metrics from configuration
@@ -110,32 +113,21 @@ export class SimpleGameLogic {
         this.config.visibilityDiagonalLimit
       );
 
-    // Add computer-controlled players
-    console.log(generateLogWithTimestamp("Add Players"));
-    for (let i = 0; i < this.config.computerPlayerCount; i++) {
-      this.addNewComputerPlayer();
-    }
+    // Initialize computer players, physics, collision, projectiles & metrics
+    this.computerManager = new ComputerPlayerManager(this, this.state, this.config);
+    this.collisionManager = new CollisionManager(
+      this.gridGen,
+      this.SimpleGameMetrics.grid,
+      this.SimpleGameMetrics.gridDamage,
+      this.SimpleGameMetrics.visibilityMatrix,
+      this.config,
+      this.onGridRefresh
+    );
+    this.physicsEngine = new PhysicsEngine(this.config, this.collisionManager);
+    this.projectileManager = new ProjectileManager(this, this.config, this.collisionManager);
+    this.metricsManager = new MetricsManager(this.state, this.config);
   }
 
-  /**
-   * Add a new player controlled by the computer to the game
-   */
-  addNewComputerPlayer(): void {
-    // Add the computer player
-    const computerPlayerPosition = this.generateSpawnPosition();
-    const computerSessionID = "PC " + String(this.computerPlayers.length);
-
-    const computerPlayerState = new Player(
-      "Computer " + String(this.computerPlayers.length),
-      computerPlayerPosition.x,
-      computerPlayerPosition.y
-    );
-    this.computerPlayers.push(
-      new ComputerPlayer(this, computerPlayerState, computerSessionID)
-    );
-
-    this.state.players.set(computerSessionID, computerPlayerState);
-  }
 
   /**
    * Returns game metrics, parameters that will not change during the game
@@ -742,192 +734,27 @@ export class SimpleGameLogic {
    * @param elapsedTime Time since game start in millis
    */
   update(deltaTime: number, elapsedTime: number): void {
-    // Update the computer managed players
-    this.computerPlayers.forEach((computerPlayer) => {
-      computerPlayer.update(deltaTime, elapsedTime);
-    });
+    // Update AI players, physics, projectiles and metrics
+    this.computerManager.updateAll(deltaTime, elapsedTime);
 
-    // Update all players
     this.state.players.forEach((player, sessionId) => {
-      this.updatePlayer(deltaTime, elapsedTime, player, sessionId);
-    });
-
-    // Update projectiles
-    this.state.projectiles = this.state.projectiles.filter((laser) => {
-      return this.updateAndTimeProjectile(deltaTime, elapsedTime, laser);
-    });
-
-    // Check for collisions between projectiles and ships
-    for (const laser of this.state.projectiles) {
-      for (const player of this.state.players.values()) {
-        if (this.projectileHit(player, laser)) {
-          // Projectile hit a ship
-          const attacker = this.state.players.get(laser.ownerSessionId);
-
-          // Check that you did not shoot yourself
-          if (attacker && attacker !== player) {
-            // Apply damage
-            player.health -= this.SimpleGameMetrics.laserDamage;
-
-            // Remove the projectile
-            this.state.projectiles.splice(
-              this.state.projectiles.indexOf(laser),
-              1
-            );
-
-            // Was this a kill?
-            if (player.health <= 0) {
-              attacker.score += 1;
-
-              // Respawn the hit player in a random location
-              const pos = this.generateSpawnPosition();
-              player.x = pos.x;
-              player.y = pos.y;
-              player.vx = 0.0;
-              player.vy = 0.0;
-              player.direction = Math.random() * 2 * Math.PI;
-              player.health = player.maxHealth;
-
-              console.log(
-                generateLogWithTimestamp(
-                  `PlayerHit ${attacker.username} killed ${player.username}, ${attacker.username} score: ${attacker.score}`
-                )
-              );
-            } else {
-              console.log(
-                generateLogWithTimestamp(
-                  `PlayerHit ${attacker.username} hit ${player.username}`
-                )
-              );
-            }
-
-            break;
-          }
-        }
-      }
-    }
-
-    this.updateMetrics(elapsedTime);
-  }
-
-  /**
-   * Checks if a projectile hit a player
-   *
-   * @param player The player to check against
-   * @param projectile The projectile to check
-   * @returns True if hit, false otherwise
-   */
-  private projectileHit(player: Player, projectile: Projectile): boolean {
-    const playerType = ShipDesignsMap.get(player.shipType);
-    if (playerType === undefined) {
-      console.error(
-        generateLogWithTimestamp(
-          "Unknown ship type: " + player.shipType + " for " + player.username
-        )
+      this.physicsEngine.updatePlayer(
+        sessionId,
+        player,
+        deltaTime,
+        elapsedTime,
+        this.state.projectiles
       );
-      return false;
-    }
+    });
 
-    const playerRadius = playerType.collisionRadius;
-    const dx = projectile.x - player.x;
-    const dy = projectile.y - player.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    return distance <= playerRadius;
-  }
-
-  /**
-   * Update the position of the projectile and check for time or out
-   * of bounds conditions when it should be removed
-   *
-   * @param deltaTime
-   * @param elapsedTime
-   * @param projectile
-   * @returns
-   */
-  private updateAndTimeProjectile(
-    deltaTime: number,
-    elapsedTime: number,
-    projectile: Projectile
-  ): boolean {
-    const newX = projectile.x + projectile.vx * deltaTime;
-    const newY = projectile.y + projectile.vy * deltaTime;
-    projectile.remainingTime -= deltaTime;
-
-    // Check for rock collisions
-    const projectileCollision = this.checkForRockCollision(
-      projectile.x,
-      projectile.y,
-      newX,
-      newY,
-      projectile.vx,
-      projectile.vy,
-      1,
-      10
+    this.state.projectiles = this.projectileManager.updateAll(
+      deltaTime,
+      elapsedTime,
+      this.state.projectiles,
+      this.state.players
     );
 
-    projectile.x = newX;
-    projectile.y = newY;
-
-    const inBounds =
-      projectile.x >= 0 &&
-      projectile.x <= this.SimpleGameMetrics.playAreaWidth &&
-      projectile.y >= 0 &&
-      projectile.y <= this.SimpleGameMetrics.playAreaHeight;
-
-    // Keep the projectile only if the remaining time is greater than zero and it hasn't hit a rock and is in bounds
-    return projectile.remainingTime > 0 && !projectileCollision.hit && inBounds;
+    this.metricsManager.update(elapsedTime);
   }
 
-  /**
-   * Update diagnostic metrics for this server
-   *
-   * @param elapsedTime Time since start of game
-   */
-  private updateMetrics(elapsedTime: number): void {
-    // Update client count
-    this.state.currentClientsCount = this.state.players.size;
-    this.state.maxClientsCountLastMinute = Math.max(
-      this.state.currentClientsCount,
-      this.state.maxClientsCountLastMinute
-    );
-
-    // Update game cycles count
-    this.gameUpdateTimestamps.push(elapsedTime);
-    if (this.gameUpdateTimestamps.length > 50) {
-      const firstTimestamp = this.gameUpdateTimestamps.shift();
-      const secondsPassed = (elapsedTime - firstTimestamp!) / 1000;
-      this.state.gameUpdateCyclesPerSecond = 50 / secondsPassed;
-    }
-
-    // Update highest score
-    this.state.players.forEach((player, sessionId) => {
-      if (player.score > this.state.highestScore) {
-        this.state.highestScore = player.score;
-        this.state.highestScorePlayer = player.username;
-      }
-    });
-
-    // Reset max clients count every minute
-    if (elapsedTime > this.nextMinuteUpdate) {
-      this.state.maxClientsCountLastMinute = this.state.currentClientsCount;
-      this.nextMinuteUpdate = elapsedTime + 60000;
-    }
-
-    if (elapsedTime > this.nextLogMetricsUpdate && this.state.players.size > 0) {
-      this.nextLogMetricsUpdate = elapsedTime + 60000;
-
-      console.log(
-        generateLogWithTimestamp(
-          `Clients Count: ${this.state.currentClientsCount}, Max Clients: ${
-            this.state.maxClientsCountLastMinute
-          }, UPS: ${this.state.gameUpdateCyclesPerSecond.toFixed(
-            2
-          )}, High Score: ${this.state.highestScorePlayer} ${
-            this.state.highestScore
-          }`
-        )
-      );
-    }
-  }
 }

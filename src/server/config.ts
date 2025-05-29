@@ -23,6 +23,10 @@ export interface GameConfig {
   computerPlayerCount: number;
   /** Visibility radius (Manhattan/diagonal limit) for fog-of-war */
   visibilityDiagonalLimit: number;
+  /** Number of game update cycles to average over (for UPS calculation) */
+  metricsWindowSize: number;
+  /** Interval (ms) between metrics logs and client-count reset */
+  metricsIntervalMs: number;
 }
 
 /** Default game configuration */
@@ -42,4 +46,6 @@ export const GAME_CONFIG: GameConfig = {
   },
   computerPlayerCount: 1,
   visibilityDiagonalLimit: 10,
+  metricsWindowSize: 50,
+  metricsIntervalMs: 60000,
 };
