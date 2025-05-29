@@ -10,6 +10,7 @@ import { PhysicsEngine } from "./PhysicsEngine";
 import { ComputerPlayerManager } from "./ComputerPlayerManager";
 import { ProjectileManager } from "./ProjectileManager";
 import { MetricsManager } from "./MetricsManager";
+import { GridManager } from "./GridManager";
 
 /**
  * Main class for the game logic
@@ -48,6 +49,7 @@ export class SimpleGameLogic {
   private computerManager!: ComputerPlayerManager;
   private projectileManager!: ProjectileManager;
   private metricsManager!: MetricsManager;
+  private gridManager!: GridManager;
 
   constructor(
     state: GameState,
@@ -61,6 +63,7 @@ export class SimpleGameLogic {
   ) {
     this.config = config;
     this.gridGen = new GameGridGenerator(this.config.gridSize);
+    this.gridManager = new GridManager(this.gridGen, this.config, this.onGridRefresh);
     this.state = state;
     this.onGridRefresh = onGridRefresh;
 
@@ -83,35 +86,10 @@ export class SimpleGameLogic {
       visibilityMatrix: [],
     };
 
-    // Generate a grid from cave generation
-    console.log(generateLogWithTimestamp("Generating Grid"));
-    this.SimpleGameMetrics.grid = this.gridGen.generateGrid("cave");
-
-    // Initialize gridDamage matrix based on grid materials
-    this.SimpleGameMetrics.gridDamage = Array(
-      this.SimpleGameMetrics.gridSize
-    )
-      .fill(undefined)
-      .map(() => Array(this.SimpleGameMetrics.gridSize).fill(0));
-
-    for (let gy = 0; gy < this.SimpleGameMetrics.gridSize; gy++) {
-      for (let gx = 0; gx < this.SimpleGameMetrics.gridSize; gx++) {
-        if (
-          this.SimpleGameMetrics.grid[gy][gx] ===
-          GameGridGenerator.MATERIAL.ROCK
-        ) {
-          this.SimpleGameMetrics.gridDamage[gy][gx] = 50;
-        }
-      }
-    }
-
-    // Calculate visibility matrix
-    console.log(generateLogWithTimestamp("Calculating Visibility"));
-    this.SimpleGameMetrics.visibilityMatrix =
-      this.gridGen.generateVisibilityMatrixDiagonalLimited(
-        this.SimpleGameMetrics.grid,
-        this.config.visibilityDiagonalLimit
-      );
+    // Initialize grid, damage, and visibility via GridManager
+    this.SimpleGameMetrics.grid = this.gridManager.grid;
+    this.SimpleGameMetrics.gridDamage = this.gridManager.gridDamage;
+    this.SimpleGameMetrics.visibilityMatrix = this.gridManager.visibilityMatrix;
 
     // Initialize computer players, physics, collision, projectiles & metrics
     this.computerManager = new ComputerPlayerManager(this, this.state, this.config);
@@ -407,7 +385,6 @@ export class SimpleGameLogic {
         1
       );
 
-      console.log("A1 y: " + player.y + " x: " + player.x);
 
       // Update player position and velocity
       player.vx = playerCollisionCorrection.vx;
@@ -415,7 +392,6 @@ export class SimpleGameLogic {
       player.x = playerCollisionCorrection.newX;
       player.y = playerCollisionCorrection.newY;
 
-      console.log("A2 y: " + player.y + " x: " + player.x);
 
       player.direction += player.vr * deltaTime;
 
@@ -473,7 +449,6 @@ export class SimpleGameLogic {
 
       if (this.isInRockCell(player.x, player.y)) {
         // Player collided with rock, respawn
-        console.log("B y: " + player.y + " x: " + player.x);
         const pos = this.generateSpawnPosition();
         player.x = pos.x;
         player.y = pos.y;

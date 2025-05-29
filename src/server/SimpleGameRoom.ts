@@ -22,21 +22,18 @@ export class SimpleGameRoom extends Room<GameState> {
       this.onGridRefresh.bind(this)
     );
 
-    this.onMessage("input", (client, input) => {
-      this.gameLogic.handleInput(client.sessionId, input);
-    });
+    const messageRouting: Record<string, keyof SimpleGameLogic> = {
+      input: "handleInput",
+      turn: "handleTurn",
+      accel: "handleAccel",
+      mouseDirection: "mouseDirection",
+    };
 
-    this.onMessage("turn", (client, input) => {
-      this.gameLogic.handleTurn(client.sessionId, input);
-    });
-
-    this.onMessage("accel", (client, input) => {
-      this.gameLogic.handleAccel(client.sessionId, input);
-    });
-
-    this.onMessage("mouseDirection", (client, direction) => {
-      this.gameLogic.mouseDirection(client.sessionId, direction);
-    });
+    for (const [message, handler] of Object.entries(messageRouting)) {
+      this.onMessage(message, (client, payload) =>
+        (this.gameLogic[handler] as any)(client.sessionId, payload)
+      );
+    }
 
     this.onMessage("joinGame", (client, input) => {
       console.log(
