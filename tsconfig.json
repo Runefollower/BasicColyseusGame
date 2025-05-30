@@ -13,7 +13,6 @@
     "allowJs": true,
     "strictNullChecks": false,
     "forceConsistentCasingInFileNames": true,
-    //"moduleResolution": "Node",
     "lib": ["dom", "ES2019"]
   },
   "include": ["src/server"]
