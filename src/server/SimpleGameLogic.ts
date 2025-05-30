@@ -340,7 +340,7 @@ export class SimpleGameLogic {
    * @param player
    * @param sessionId
    */
-gridPosForPoint(pt: { x: number; y: number }): { x: number; y: number } {
+  updatePlayer(
     deltaTime: number,
     elapsedTime: number,
     player: Player,
