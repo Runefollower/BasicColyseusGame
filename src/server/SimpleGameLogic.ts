@@ -110,6 +110,13 @@ export class SimpleGameLogic {
   }
 
   /**
+   * Convert world coordinates to grid-cell indices via GridManager.
+   */
+  public gridPosForPoint(pt: { x: number; y: number }): { x: number; y: number } {
+    return this.gridManager.gridPosForPoint(pt);
+  }
+
+  /**
    * Process client event messages
    *
    * @param sessionID Session id of the client sending the message
