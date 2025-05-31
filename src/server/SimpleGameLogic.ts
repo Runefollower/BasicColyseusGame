@@ -62,10 +62,10 @@ export class SimpleGameLogic {
     config: GameConfig = GAME_CONFIG
   ) {
     this.config = config;
+    this.onGridRefresh = onGridRefresh;
     this.gridGen = new GameGridGenerator(this.config.gridSize);
     this.gridManager = new GridManager(this.gridGen, this.config, this.onGridRefresh);
     this.state = state;
-    this.onGridRefresh = onGridRefresh;
 
     // Initialize metrics from configuration
     this.SimpleGameMetrics = {
@@ -93,14 +93,7 @@ export class SimpleGameLogic {
 
     // Initialize computer players, physics, collision, projectiles & metrics
     this.computerManager = new ComputerPlayerManager(this, this.state, this.config);
-    this.collisionManager = new CollisionManager(
-      this.gridGen,
-      this.SimpleGameMetrics.grid,
-      this.SimpleGameMetrics.gridDamage,
-      this.SimpleGameMetrics.visibilityMatrix,
-      this.config,
-      this.onGridRefresh
-    );
+    this.collisionManager = new CollisionManager(this.gridManager, this.config);
     this.physicsEngine = new PhysicsEngine(this.config, this.collisionManager);
     this.projectileManager = new ProjectileManager(this, this.config, this.collisionManager);
     this.metricsManager = new MetricsManager(this.state, this.config);
@@ -374,7 +367,7 @@ export class SimpleGameLogic {
       const newY = player.y + newVy * deltaTime;
 
       // Check for rock collisions
-      const playerCollisionCorrection = this.checkForRockCollision(
+      const playerCollisionCorrection = this.collisionManager.checkForRockCollision(
         player.x,
         player.y,
         newX,
@@ -467,240 +460,6 @@ export class SimpleGameLogic {
     }
   }
 
-  /**
-   * Check to see if the player and projectile collided with rocks.
-   * If there is a collision, it adjusts the position and velocity accordingly.
-   *
-   * @param x Initial x position of entity
-   * @param y Initial y position of entity
-   * @param newX New proposed x position
-   * @param newY New proposed y position
-   * @param vx New proposed x velocity
-   * @param vy New proposed y velocity
-   * @param radius Collision radius
-   * @param damage Damage done to rock
-   * @returns New entity position and velocity and indication of collision
-   */
-  checkForRockCollision(
-    x: number,
-    y: number,
-    newX: number,
-    newY: number,
-    vx: number,
-    vy: number,
-    radius: number,
-    damage: number
-  ): { newX: number; newY: number; vx: number; vy: number; hit: boolean } {
-    let newVal = {
-      newX,
-      newY,
-      vx,
-      vy,
-      hit: false,
-    };
-
-    // Calculate the bounding box of the ship's collision area
-    const minX = newX - radius;
-    const maxX = newX + radius;
-    const minY = newY - radius;
-    const maxY = newY + radius;
-
-    // Determine the range of grid cells to check
-    const startGridX = Math.floor(minX / this.SimpleGameMetrics.cellSize);
-    const endGridX = Math.floor(maxX / this.SimpleGameMetrics.cellSize);
-    const startGridY = Math.floor(minY / this.SimpleGameMetrics.cellSize);
-    const endGridY = Math.floor(maxY / this.SimpleGameMetrics.cellSize);
-
-    for (let gridY = startGridY; gridY <= endGridY; gridY++) {
-      for (let gridX = startGridX; gridX <= endGridX; gridX++) {
-        // Boundary check
-        if (
-          gridY < 0 ||
-          gridY >= this.SimpleGameMetrics.grid.length ||
-          gridX < 0 ||
-          gridX >= this.SimpleGameMetrics.grid[0].length
-        ) {
-          continue; // Skip out-of-bounds cells
-        }
-
-        const gridCell = this.SimpleGameMetrics.grid[gridY][gridX];
-
-        if (gridCell === GameGridGenerator.MATERIAL.ROCK) {
-          // Get the center of the grid cell
-          const cellCenterX =
-            gridX * this.SimpleGameMetrics.cellSize +
-            this.SimpleGameMetrics.cellSize / 2;
-          const cellCenterY =
-            gridY * this.SimpleGameMetrics.cellSize +
-            this.SimpleGameMetrics.cellSize / 2;
-
-          // Calculate the closest point on the cell to the ship's new position
-          const closestX = this.clamp(
-            newX,
-            cellCenterX - this.SimpleGameMetrics.cellSize / 2,
-            cellCenterX + this.SimpleGameMetrics.cellSize / 2
-          );
-          const closestY = this.clamp(
-            newY,
-            cellCenterY - this.SimpleGameMetrics.cellSize / 2,
-            cellCenterY + this.SimpleGameMetrics.cellSize / 2
-          );
-
-          // Calculate the distance between the ship's center and this closest point
-          const distanceX = newX - closestX;
-          const distanceY = newY - closestY;
-          const distanceSquared = distanceX * distanceX + distanceY * distanceY;
-          const collisionDistance = radius;
-
-          if (distanceSquared < collisionDistance * collisionDistance) {
-            // Collision detected
-            newVal.hit = true;
-
-            const distance = Math.sqrt(distanceSquared) || 1; // Prevent division by zero
-
-            // Normal vector from the rock to the ship
-            const normalX = distanceX / distance;
-            const normalY = distanceY / distance;
-
-            // Penetration depth
-            const penetration = collisionDistance - distance;
-
-            // Adjust the ship's position to resolve the collision
-            newVal.newX += normalX * penetration;
-            newVal.newY += normalY * penetration;
-
-            // Adjust the velocity by removing the component along the normal
-            const velocityDotNormal = newVal.vx * normalX + newVal.vy * normalY;
-            if (velocityDotNormal < 0) {
-              // Only adjust if moving towards the rock
-              newVal.vx -= velocityDotNormal * normalX;
-              newVal.vy -= velocityDotNormal * normalY;
-            }
-
-            // Apply damage to the rock
-            this.SimpleGameMetrics.gridDamage[gridY][gridX] -= damage;
-
-            if (this.SimpleGameMetrics.gridDamage[gridY][gridX] <= 0) {
-              // Rock is destroyed, set cell to free
-              this.SimpleGameMetrics.grid[gridY][gridX] =
-                GameGridGenerator.MATERIAL.FREE;
-              console.log(`Rock destroyed at y:${gridY} x:${gridX}`);
-
-              // Recalculate visibility for affected cells
-              this.recalculateVisibility(gridY, gridX);
-            }
-          }
-        }
-      }
-    }
-
-    return newVal;
-  }
-
-  /**
-   * Utility function to clamp a value between a minimum and maximum.
-   *
-   * @param value The value to clamp
-   * @param min The minimum allowed value
-   * @param max The maximum allowed value
-   * @returns The clamped value
-   */
-  private clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
-  }
-
-  /**
-   * Recalculates visibility for cells affected by rock destruction
-   *
-   * @param gy Grid y-coordinate
-   * @param gx Grid x-coordinate
-   */
-  private recalculateVisibility(gy: number, gx: number): void {
-    if (
-      gy < 0 ||
-      gy >= this.SimpleGameMetrics.gridSize ||
-      gx < 0 ||
-      gx >= this.SimpleGameMetrics.gridSize
-    ) return;
-
-    // Recalculate visibility for the destroyed rock cell
-    this.SimpleGameMetrics.visibilityMatrix[gy][gx] =
-      this.gridGen.generateVisibilityMatrixDiagonalLimitedPoint(
-        gy,
-        gx,
-        this.SimpleGameMetrics.grid,
-        this.config.visibilityDiagonalLimit
-      );
-
-    // Notify clients about the grid update
-    this.notifyClientsGridUpdate(gy, gx);
-  }
-
-  /**
-   * Notify clients of updates to the grid around a point
-   *
-   * @param gy  Grid y-position updated
-   * @param gx  Grid x-position updated
-   */
-  notifyClientsGridUpdate(gy: number, gx: number) {
-    if (this.onGridRefresh) {
-      for (
-        let patchY = gy - this.config.visibilityDiagonalLimit;
-        patchY < gy + this.config.visibilityDiagonalLimit;
-        patchY++
-      ) {
-        for (
-          let patchX = gx - this.config.visibilityDiagonalLimit;
-          patchX < gx + this.config.visibilityDiagonalLimit;
-          patchX++
-        ) {
-          if (
-            patchY < 0 ||
-            patchY >= this.SimpleGameMetrics.gridSize ||
-            patchX < 0 ||
-            patchX >= this.SimpleGameMetrics.gridSize
-          )
-            continue;
-
-          // Invoke the callback to notify clients
-          this.onGridRefresh(
-            patchY,
-            patchX,
-            this.SimpleGameMetrics.grid[patchY][patchX],
-            this.SimpleGameMetrics.visibilityMatrix[patchY][patchX]
-          );
-        }
-      }
-    }
-  }
-
-  /**
-   * Returns the grid position when passed a coordinate
-   *
-   * @param pt The x y point to be tested
-   * @returns The grid position of that point
-   */
-  gridPosForPoint(pt: { x: number; y: number }): { x: number; y: number } {
-    const returnPos = { x: 0, y: 0 };
-
-    // Find the grid cell that we are currently in
-    returnPos.x = Math.max(
-      0,
-      Math.min(
-        this.SimpleGameMetrics.gridSize - 1,
-        Math.floor(pt.x / this.SimpleGameMetrics.cellSize)
-      )
-    );
-    returnPos.y = Math.max(
-      0,
-      Math.min(
-        this.SimpleGameMetrics.gridSize - 1,
-        Math.floor(pt.y / this.SimpleGameMetrics.cellSize)
-      )
-    );
-
-    return returnPos;
-  }
 
   /**
    * Update the state of the game for the next game cycle.
